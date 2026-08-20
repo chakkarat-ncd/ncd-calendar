@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ปฏิทินยอดนัด คลินิก NCD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#16262E; --ink-2:#33505C; --muted:#7A8F99;
+  --paper:#F7F5F0; --card:#FFFFFF; --line:#DFDBD2;
+  --teal:#0E6E6B; --ok:#4E8B5B; --ok-bg:#E3EFE4;
+  --warn:#B7791F; --warn-bg:#FBF0D9; --bad:#B33A33; --bad-bg:#F8E0DC;
+  --none-bg:#F0EEE9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--paper);color:var(--ink);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 70px}
+
+header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:20px}
+h1{font-size:25px;font-weight:700;letter-spacing:-.02em}
+.sub{color:var(--ink-2);font-size:14px;margin-top:3px}
+
+.drop{border:2px dashed var(--line);border-radius:14px;background:var(--card);
+  padding:26px 20px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:16px}
+.drop:hover,.drop.over{border-color:var(--teal);background:#F2F8F7}
+.drop h2{font-size:17px;font-weight:600;margin-bottom:5px}
+.drop p{color:var(--muted);font-size:13.5px}
+.drop .btn{display:inline-block;margin-top:12px;background:var(--ink);color:#fff;
+  padding:9px 20px;border-radius:8px;font-weight:600;font-size:14px}
+
+.msg{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px;display:none}
+.msg.err{background:var(--bad-bg);border:1px solid #E3B5AF;color:#8C2B25;display:block}
+.msg.warn{background:var(--warn-bg);border:1px solid #E5CE95;color:#7A5210;display:block}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px;margin-bottom:18px}
+.panel h3{font-size:15px;font-weight:600;margin-bottom:12px;
+  text-transform:none;letter-spacing:.01em}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.stat .n{font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;line-height:1}
+.stat .l{color:var(--ink-2);font-size:13px;margin-top:6px}
+.stat.bad .n{color:var(--bad)} .stat.warn .n{color:var(--warn)} .stat.ok .n{color:var(--ok)}
+
+.clinics{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  border-radius:999px;padding:6px 13px;font-size:13.5px;cursor:pointer;background:#fff;user-select:none}
+.chip input{accent-color:var(--teal);cursor:pointer;width:15px;height:15px}
+.chip.on{background:#EAF3F2;border-color:var(--teal);color:var(--teal);font-weight:500}
+.chip .c{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:12px}
+.hint{color:var(--muted);font-size:12.5px;margin-top:10px}
+
+.mon{margin-bottom:22px}
+.mon h4{font-size:16px;font-weight:600;margin-bottom:9px;padding-left:2px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{text-align:center;font-size:12px;color:var(--muted);font-weight:500;padding:3px 0}
+.cell{aspect-ratio:1/1;border-radius:9px;border:1px solid var(--line);background:#fff;
+  padding:6px;display:flex;flex-direction:column;justify-content:space-between;min-height:64px}
+.cell.pad{border:none;background:none}
+.cell .d{font-size:11.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.cell .v{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:600;line-height:1}
+.cell .bar{height:3px;border-radius:2px;background:#E8E5DE;overflow:hidden}
+.cell .bar i{display:block;height:100%;border-radius:2px}
+.cell.ok{background:var(--ok-bg);border-color:#C3DCC7} .cell.ok .v{color:#356B42}
+.cell.ok .bar i{background:var(--ok)}
+.cell.warn{background:var(--warn-bg);border-color:#E8D6A4} .cell.warn .v{color:#8A5B10}
+.cell.warn .bar i{background:var(--warn)}
+.cell.bad{background:var(--bad-bg);border-color:#E7BDB6} .cell.bad .v{color:var(--bad)}
+.cell.bad .bar i{background:var(--bad)}
+.cell.none{background:var(--none-bg)} .cell.none .v{color:#B8B3A9;font-size:15px}
+.cell.today{outline:2px solid var(--ink);outline-offset:1px}
+
+#range{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;
+  color:var(--ink-2);margin-bottom:12px}
+.rb{font-family:inherit;font-size:13px;border:1px solid var(--line);background:#fff;
+  color:var(--ink-2);border-radius:7px;padding:5px 12px;cursor:pointer}
+.rb:hover{border-color:var(--teal);color:var(--teal)}
+.rb.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.beyond{background:var(--warn-bg);border:1px solid #E5CE95;color:#7A5210;
+  border-radius:7px;padding:5px 11px;font-size:13px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin-bottom:16px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:13px;height:13px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.12)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;font-size:13px;color:var(--ink-2);
+  border-bottom:1.5px solid var(--line);padding:7px 9px}
+td{padding:7px 9px;border-bottom:1px solid #EEEBE5}
+td.num{font-family:'IBM Plex Mono',monospace;text-align:right}
+tr:hover td{background:#FAF9F6}
+.free{color:var(--ok);font-weight:600}
+
+footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);
+  padding-top:14px;margin-top:26px}
+#out{display:none}
+@media(max-width:720px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .cell{min-height:52px;padding:4px} .cell .v{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>ปฏิทินยอดนัด คลินิก NCD</h1>
+  <div class="sub">โรงพยาบาลจักราช · เพดาน 80 นัดต่อวัน · ข้อมูลทั้งหมดประมวลผลในเครื่องนี้ ไม่มีการส่งออกไปที่ใด</div>
+</header>
+
+<div class="drop" id="drop">
+  <h2>วางไฟล์นัดจาก HosXP ที่นี่</h2>
+  <p>ลากไฟล์มาวาง หรือกดเลือกไฟล์ · รองรับ .xlsx .xls .csv</p>
+  <span class="btn">เลือกไฟล์</span>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<div id="out">
+  <div class="panel">
+    <h3>คลินิกที่นับรวม</h3>
+    <div class="clinics" id="chips"></div>
+    <div class="hint" id="chiphint"></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div id="range"></div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--ok-bg);border-color:#C3DCC7"></i> ไม่เกิน 60 — ยังรับได้</span>
+    <span><i class="sw" style="background:var(--warn-bg);border-color:#E8D6A4"></i> 61–80 — ใกล้เต็ม</span>
+    <span><i class="sw" style="background:var(--bad-bg);border-color:#E7BDB6"></i> เกิน 80 — เกินเพดาน</span>
+    <span><i class="sw" style="background:var(--none-bg)"></i> ไม่มีนัด</span>
+  </div>
+
+  <div id="cal"></div>
+
+  <div class="panel">
+    <h3>วันที่ยังรับนัดได้ — ใช้ตอบผู้ป่วยเมื่อวันที่ขอมาเต็มแล้ว</h3>
+    <div id="free"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+</div>
+
+<script>
+const CAP=80, WARN=60;
+let DAYS=120;
+const NCD=['เบาหวาน','ความดันเลือดสูง','ชะลอไตเสื่อม','คลินิก วาร์ฟาริน','คลีนิก CVA','MED NCD','IMC','NCD Clinic'];
+const TH_M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_D=['อา','จ','อ','พ','พฤ','ศ','ส'];
+let rows=[], clinics=[], picked=new Set(), fileName='';
+
+const $=id=>document.getElementById(id);
+const norm=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
+const key=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+
+function show(t,kind){const m=$('msg');m.className='msg '+kind;m.innerHTML=t;}
+function clearMsg(){$('msg').className='msg';$('msg').innerHTML='';}
+
+// วันที่: รองรับ Excel serial, Date, และข้อความ d/m/yyyy (ค.ศ. หรือ พ.ศ.)
+function parseDate(v){
+  if(v==null||v==='')return null;
+  if(v instanceof Date&&!isNaN(v))return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  if(typeof v==='number'&&v>20000&&v<80000){
+    const o=XLSX.SSF.parse_date_code(v);
+    if(o)return new Date(o.y,o.m-1,o.d);
+    return null;
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if(m){let y=+m[3];if(y>2400)y-=543;return new Date(y,+m[2]-1,+m[1]);}
+  m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(m){let y=+m[1];if(y>2400)y-=543;return new Date(y,+m[2]-1,+m[3]);}
+  const d=new Date(s);
+  return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());
+}
+
+function readFile(f){
+  fileName=f.name; clearMsg();
+  const r=new FileReader();
+  r.onerror=()=>show('อ่านไฟล์ไม่สำเร็จ ลองบันทึกไฟล์เป็น .xlsx แล้วเลือกใหม่','err');
+  r.onload=e=>{
+    let wb;
+    try{ wb=XLSX.read(e.target.result,{type:'array',cellDates:true}); }
+    catch(err){ show('เปิดไฟล์นี้ไม่ได้ ไฟล์อาจเสียหาย หรือยังอยู่ในโหมดมุมมองที่ได้รับการป้องกัน — เปิดใน Excel แล้วบันทึกเป็น .xlsx ก่อน','err'); return; }
+    const sh=wb.Sheets[wb.SheetNames[0]];
+    const data=XLSX.utils.sheet_to_json(sh,{defval:''});
+    if(!data.length){ show('ไฟล์นี้ไม่มีข้อมูล — ตรวจว่าบันทึกไฟล์หลังจาก export แล้วหรือยัง','err'); return; }
+    const cols=Object.keys(data[0]).map(norm);
+    const cC=cols.find(c=>c==='คลินิก')||cols.find(c=>c.includes('คลินิก'));
+    const cD=cols.find(c=>c==='วันที่นัด')||cols.find(c=>c.includes('วันที่นัด'))||cols.find(c=>c.includes('วันนัด'));
+    if(!cC||!cD){
+      show('ไม่พบคอลัมน์ที่ต้องใช้ ระบบต้องการคอลัมน์ <b>คลินิก</b> และ <b>วันที่นัด</b><br>คอลัมน์ที่พบในไฟล์: '+cols.join(' · '),'err');
+      return;
+    }
+    rows=[]; let badDate=0;
+    data.forEach(o=>{
+      const cl=norm(o[cC]); const dt=parseDate(o[cD]);
+      if(!cl)return;
+      if(!dt){badDate++;return;}
+      rows.push({cl,dt});
+    });
+    if(!rows.length){ show('อ่านข้อมูลไม่ได้เลย — ตรวจรูปแบบวันที่ในคอลัมน์วันที่นัด','err'); return; }
+    const found=[...new Set(rows.map(r=>r.cl))];
+    clinics=found.map(c=>({name:c,n:rows.filter(r=>r.cl===c).length})).sort((a,b)=>b.n-a.n);
+    picked=new Set(found.filter(c=>NCD.includes(c)));
+    const missing=NCD.filter(c=>!found.includes(c));
+    let w=[];
+    if(badDate) w.push(badDate+' รายการอ่านวันที่ไม่ได้ จึงไม่ถูกนับ');
+    if(missing.length) w.push('ไม่พบคลินิกเหล่านี้ในไฟล์: '+missing.join(' · ')+' (อาจไม่มีนัดในช่วงนี้ หรือชื่อในระบบเปลี่ยนไป)');
+    if(w.length) show(w.join('<br>'),'warn');
+    $('out').style.display='block';
+    drawChips(); render();
+  };
+  r.readAsArrayBuffer(f);
+}
+
+function drawChips(){
+  const box=$('chips'); box.innerHTML='';
+  clinics.forEach(c=>{
+    const on=picked.has(c.name);
+    const l=document.createElement('label');
+    l.className='chip'+(on?' on':'');
+    l.innerHTML='<input type="checkbox"'+(on?' checked':'')+'><span>'+c.name+'</span><span class="c">'+c.n+'</span>';
+    l.querySelector('input').onchange=ev=>{
+      ev.target.checked?picked.add(c.name):picked.delete(c.name);
+      l.classList.toggle('on',ev.target.checked); render();
+    };
+    box.appendChild(l);
+  });
+  $('chiphint').textContent='ติ๊กไว้แล้ว '+picked.size+' คลินิกของ NCD จากทั้งหมด '+clinics.length+' คลินิกในไฟล์ · ปรับได้ถ้าชื่อคลินิกในระบบเปลี่ยน';
+}
+
+function render(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let maxInFile=null;
+  rows.forEach(r=>{ if(picked.has(r.cl)&&(!maxInFile||r.dt>maxInFile))maxInFile=r.dt; });
+  if(DAYS==='all'&&maxInFile) DAYS=Math.max(1,Math.round((maxInFile-today)/86400000)+1);
+  const end=new Date(today); end.setDate(end.getDate()+DAYS-1);
+  const cnt={};
+  rows.forEach(r=>{ if(picked.has(r.cl)&&r.dt>=today&&r.dt<=end){const k=key(r.dt);cnt[k]=(cnt[k]||0)+1;} });
+  const beyond=rows.filter(r=>picked.has(r.cl)&&r.dt>end).length;
+  $('range').innerHTML='แสดง '+DAYS+' วันข้างหน้า ('+fmt(today)+' – '+fmt(end)+') '+
+    [90,120,180,'all'].map(v=>'<button class="rb'+(String(v)===String(DAYS)||(v==='all'&&!beyond&&maxInFile&&DAYS>180)?' on':'')+'" data-v="'+v+'">'+(v==='all'?'ทั้งไฟล์':v+' วัน')+'</button>').join('')+
+    (beyond?'<span class="beyond">ไฟล์นี้มีอีก '+beyond+' นัดหลัง '+fmt(end)+' — กด “ทั้งไฟล์” เพื่อดูให้ครบ</span>':'');
+  $('range').querySelectorAll('.rb').forEach(b=>b.onclick=()=>{DAYS=b.dataset.v==='all'?'all':+b.dataset.v;render();});
+
+  const list=[];
+  for(let i=0;i<DAYS;i++){const d=new Date(today);d.setDate(d.getDate()+i);list.push({d,n:cnt[key(d)]||0});}
+
+  const has=list.filter(x=>x.n>0), over=has.filter(x=>x.n>CAP),
+        near=has.filter(x=>x.n>WARN&&x.n<=CAP), free=has.filter(x=>x.n<=WARN);
+  $('stats').innerHTML=
+    st(has.length,'วันที่มีนัดใน 90 วันข้างหน้า','')+
+    st(over.length,'วันที่เกินเพดาน 80','bad')+
+    st(near.length,'วันที่ใกล้เต็ม 61–80','warn')+
+    st(free.length,'วันที่ยังรับได้สบาย','ok');
+
+  // ปฏิทินรายเดือน
+  let html='', cur=null, cells='';
+  list.forEach((x,i)=>{
+    const ym=x.d.getFullYear()+'-'+x.d.getMonth();
+    if(ym!==cur){
+      if(cur!==null){html+=wrapMon(cur,cells);cells='';}
+      cur=ym;
+      for(let p=0;p<x.d.getDay();p++)cells+='<div class="cell pad"></div>';
+    }
+    const cls=x.n===0?'none':(x.n>CAP?'bad':(x.n>WARN?'warn':'ok'));
+    const pct=Math.min(100,Math.round(x.n/CAP*100));
+    const tip=x.n===0?'ไม่มีนัด':(x.n>CAP?('เกินเพดาน '+(x.n-CAP)+' ราย'):('รับได้อีก '+(CAP-x.n)+' ราย'));
+    cells+='<div class="cell '+cls+(i===0?' today':'')+'" title="'+fmt(x.d)+' — '+tip+'">'+
+      '<div class="d">'+x.d.getDate()+'</div>'+
+      '<div class="v">'+(x.n||'–')+'</div>'+
+      (x.n?'<div class="bar"><i style="width:'+pct+'%"></i></div>':'<div class="bar"></div>')+
+      '</div>';
+  });
+  if(cur!==null)html+=wrapMon(cur,cells);
+  $('cal').innerHTML=html;
+
+  // วันที่ยังว่าง
+  const avail=has.filter(x=>x.n<=CAP);
+  $('free').innerHTML=avail.length?
+    '<table><thead><tr><th>วันที่</th><th>วัน</th><th class="num">ยอดนัดตอนนี้</th><th class="num">รับได้อีก</th></tr></thead><tbody>'+
+    avail.map(x=>'<tr><td>'+fmt(x.d)+'</td><td>'+TH_D[x.d.getDay()]+'</td><td class="num">'+x.n+
+      '</td><td class="num free">'+(CAP-x.n)+'</td></tr>').join('')+'</tbody></table>'
+    :'<p style="color:var(--muted)">ไม่มีวันที่ยังรับได้ใน 90 วันข้างหน้า — ทุกวันที่มีคลินิกเกินเพดานแล้ว</p>';
+
+  const tot=has.reduce((s,x)=>s+x.n,0);
+  $('foot').innerHTML='ไฟล์: '+fileName+' · นับ '+tot.toLocaleString()+' นัด จาก '+picked.size+
+    ' คลินิก · ช่วง '+fmt(today)+' ถึง '+fmt(end)+' · สร้างหน้านี้เมื่อ '+fmt(new Date())+
+    '<br>ข้อมูลผู้ป่วยทั้งหมดอยู่ในเครื่องนี้เท่านั้น หน้าเว็บนี้ไม่ส่งข้อมูลออกไปที่ใด และไม่เชื่อมต่อกับ HosXP';
+}
+function st(n,l,c){return '<div class="stat '+c+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>';}
+function wrapMon(ym,cells){
+  const [y,m]=ym.split('-').map(Number);
+  return '<div class="mon"><h4>'+TH_M[m]+' '+(y+543)+'</h4><div class="grid">'+
+    TH_D.map(d=>'<div class="dow">'+d+'</div>').join('')+cells+'</div></div>';
+}
+function fmt(d){return d.getDate()+' '+TH_M[d.getMonth()]+' '+String(d.getFullYear()+543).slice(-2);}
+
+const drop=$('drop'),fin=$('file');
+drop.onclick=()=>fin.click();
+fin.onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);};
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);});
+</script>
+</body>
+</html>

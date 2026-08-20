@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  /* กล่องเนื้อหาหลัก — ตรงกับ .panel ในไฟล์ต้นแบบ */
+  .panel {
+    @apply bg-card border border-line rounded-[14px] px-5 py-[18px] mb-[18px];
+  }
+  .panel-h {
+    @apply text-[15px] font-semibold mb-3;
+  }
+
+  /* ชิปเลือกคลินิก */
+  .chip {
+    @apply inline-flex items-center gap-[7px] border border-line rounded-full
+           px-[13px] py-[6px] text-[13.5px] cursor-pointer bg-white select-none;
+  }
+  .chip.on {
+    @apply bg-[#EAF3F2] border-teal text-teal font-medium;
+  }
+
+  /* ปุ่มเลือกช่วงวัน */
+  .rb {
+    @apply font-sans text-[13px] border border-line bg-white text-ink-2
+           rounded-[7px] px-3 py-[5px] cursor-pointer hover:border-teal hover:text-teal;
+  }
+  .rb.on {
+    @apply bg-ink border-ink text-white font-semibold hover:text-white hover:border-ink;
+  }
+
+  /* ปุ่มหลัก */
+  .btn-primary {
+    @apply bg-ink text-white rounded-lg px-5 py-[10px] font-semibold text-sm
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply border border-line bg-white text-ink-2 rounded-lg px-4 py-[10px]
+           font-medium text-sm hover:border-teal hover:text-teal;
+  }
+
+  /* ช่องกรอก */
+  .field {
+    @apply w-full border border-line rounded-lg px-3 py-[9px] text-[14.5px] bg-white
+           focus:outline-none focus:border-teal;
+  }
+  .label {
+    @apply block text-[13px] text-ink-2 font-medium mb-[5px];
+  }
+
+  /* ตาราง */
+  .tbl {
+    @apply w-full border-collapse text-sm;
+  }
+  .tbl th {
+    @apply text-left font-semibold text-[13px] text-ink-2 border-b-[1.5px] border-line px-[9px] py-[7px];
+  }
+  .tbl td {
+    @apply px-[9px] py-[7px] border-b border-[#EEEBE5];
+  }
+  .tbl td.num {
+    @apply font-mono text-right;
+  }
+  .tbl tbody tr:hover td {
+    @apply bg-[#FAF9F6];
+  }
+}
