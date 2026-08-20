@@ -76,7 +76,7 @@ export function LocalPage() {
   const total = [...counts.values()].reduce((s, n) => s + n, 0)
 
   return (
-    <div className="max-w-[1180px] mx-auto px-[18px] pt-[22px] pb-[70px]">
+    <div className="max-w-[1180px] xl:max-w-[1440px] mx-auto px-[18px] pt-[22px] pb-[70px]">
       <Header subtitle="โหมดดูจากไฟล์ · ประมวลผลในเครื่องนี้เท่านั้น ไม่ส่งข้อมูลออกไปที่ใด" />
 
       <Message kind="info" title="โหมดนี้ไม่เกี่ยวกับข้อมูลกลาง">

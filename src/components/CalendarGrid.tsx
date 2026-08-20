@@ -9,11 +9,19 @@ const CELL: Record<Level, string> = {
   bad: 'bg-bad-bg border-bad-line',
 }
 const VALUE: Record<Level, string> = {
-  none: 'text-[#B8B3A9] text-[15px]',
+  none: 'text-[#B8B3A9]',
   ok: 'text-ok-ink',
   warn: 'text-warn-ink',
   bad: 'text-bad',
 }
+
+/**
+ * ขนาดตัวเลขยอดนัด — ต้องอ่านออกจากระยะนั่งทำงานแม้ตอนวางเดือนข้างกัน 3 คอลัมน์
+ * ช่องเล็กสุดตอน 3 คอลัมน์กว้างราว 60px ตัวเลข 19px จึงยังเต็มตาอยู่
+ */
+const VALUE_SIZE = 'text-[16px] sm:text-[20px] xl:text-[19px]'
+/** วันที่ไม่มีนัดแสดงขีด ให้เล็กลงเพื่อไม่ให้แย่งสายตาจากวันที่มีนัดจริง */
+const DASH_SIZE = 'text-[13px] sm:text-[15px]'
 const BAR: Record<Level, string> = {
   none: 'bg-transparent',
   ok: 'bg-ok',
@@ -34,14 +42,22 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
     <div
       title={tip(x)}
       className={
-        'aspect-square rounded-[9px] border p-1 sm:p-1.5 flex flex-col justify-between ' +
-        'min-h-[52px] sm:min-h-[64px] ' +
+        // ปล่อยให้ aspect-square เป็นตัวกำหนดขนาด ช่องจึงย่อตามคอลัมน์ของเดือนได้เอง
+        // min-h เหลือไว้เป็นพื้นแค่กันช่องแบนตอนจอแคบมาก ไม่ให้ไปสู้กับ aspect-square
+        'aspect-square rounded-[9px] border p-1 sm:p-1.5 xl:p-1 flex flex-col justify-between ' +
+        'min-h-[42px] ' +
         CELL[lv] +
         (isToday ? ' outline outline-2 outline-ink outline-offset-1' : '')
       }
     >
-      <div className="font-mono text-[11.5px] text-muted leading-none">{x.date.getDate()}</div>
-      <div className={`font-mono text-[16px] sm:text-[21px] font-semibold leading-none ${VALUE[lv]}`}>
+      <div className="font-mono text-[11px] sm:text-[11.5px] text-muted leading-none">
+        {x.date.getDate()}
+      </div>
+      <div
+        className={`font-mono font-semibold leading-none ${
+          lv === 'none' ? DASH_SIZE : VALUE_SIZE
+        } ${VALUE[lv]}`}
+      >
         {x.n || '–'}
       </div>
       <div className="h-[3px] rounded-[2px] bg-[#E8E5DE] overflow-hidden">
@@ -78,13 +94,15 @@ export function CalendarGrid({ list }: { list: DayCount[] }) {
   const months = groupByMonth(list)
 
   return (
-    <div>
+    // วางเดือนข้างกันเมื่อจอกว้างพอ จะได้เห็นหลายเดือนโดยไม่ต้องเลื่อน
+    // 1 คอลัมน์เมื่อแคบกว่า 900px · 2 คอลัมน์ที่ 900–1279px · 3 คอลัมน์ตั้งแต่ 1280px
+    <div className="grid grid-cols-1 min-[900px]:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-5 mb-[22px]">
       {months.map((mo) => (
-        <section key={`${mo.y}-${mo.m}`} className="mb-[22px]">
+        <section key={`${mo.y}-${mo.m}`}>
           <h4 className="text-base font-semibold mb-2 pl-0.5">
             {TH_M[mo.m]} {mo.y + 543}
           </h4>
-          <div className="grid grid-cols-7 gap-[3px] sm:gap-[5px]">
+          <div className="grid grid-cols-7 gap-[3px] sm:gap-[4px]">
             {TH_D_MON_FIRST.map((d) => (
               <div key={d} className="text-center text-xs text-muted font-medium py-[3px]">
                 {d}
