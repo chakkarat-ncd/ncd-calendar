@@ -14,7 +14,13 @@ import {
   SheetError,
   type ParseResult,
 } from '../lib/excel'
-import { DataError, replaceCounts, supabaseConfigured, type ReplaceResult } from '../lib/supabase'
+import {
+  DataError,
+  fetchClinics,
+  replaceCounts,
+  supabaseConfigured,
+  type ReplaceResult,
+} from '../lib/supabase'
 
 const UPLOADER_STORAGE_KEY = 'ncd-calendar.uploader'
 /** ไฟล์ควรครอบคลุมนัดล่วงหน้าอย่างน้อยเท่านี้ ถ้าน้อยกว่านี้ให้เตือนก่อนส่ง */
@@ -32,10 +38,24 @@ export function UploadPage() {
   const [result, setResult] = useState<ParseResult | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [done, setDone] = useState<ReplaceResult | null>(null)
+  // รายชื่อคลินิกจากฐานข้อมูล ถ้าดึงไม่ได้จะถอยไปใช้รายชื่อสำรองในโค้ด
+  const [clinicNames, setClinicNames] = useState<readonly string[]>(NCD_CLINICS)
+  const [clinicSource, setClinicSource] = useState<'db' | 'code'>('code')
 
   // จำชื่อผู้อัปโหลดไว้ให้ไม่ต้องพิมพ์ซ้ำ — รหัสอัปโหลดไม่ถูกเก็บไว้ที่ไหนทั้งสิ้น
   useEffect(() => {
     setUploader(localStorage.getItem(UPLOADER_STORAGE_KEY) ?? '')
+  }, [])
+
+  useEffect(() => {
+    fetchClinics()
+      .then((cs) => {
+        if (cs.length) {
+          setClinicNames(cs.map((c) => c.clinic_name))
+          setClinicSource('db')
+        }
+      })
+      .catch(() => setClinicSource('code'))
   }, [])
 
   function changeUploader(v: string) {
@@ -50,9 +70,9 @@ export function UploadPage() {
     setDone(null)
     setConfirming(false)
     try {
-      const r = await readAppointmentFile(file)
+      const r = await readAppointmentFile(file, clinicNames)
       setResult(r)
-      setPicked(defaultPicked(r.clinics))
+      setPicked(defaultPicked(r.clinics, clinicNames))
     } catch (e) {
       setResult(null)
       setPicked(new Set())
@@ -109,8 +129,7 @@ export function UploadPage() {
     return result.rows.filter((r) => picked.has(r.clinic) && r.date.getTime() < fromKey).length
   }, [result, picked, fromKey])
 
-  const ncd: readonly string[] = NCD_CLINICS
-  const extraClinics = [...picked].filter((c) => !ncd.includes(c))
+  const extraClinics = [...picked].filter((c) => !clinicNames.includes(c))
 
   const problems: string[] = []
   if (!uploader.trim()) problems.push('ยังไม่ได้กรอกชื่อผู้อัปโหลด')
@@ -258,7 +277,14 @@ export function UploadPage() {
               )}
 
               <div className="panel">
-                <h3 className="panel-h">คลินิกที่จะนับรวม</h3>
+                <h3 className="panel-h">
+                  คลินิกที่จะนับรวม
+                  {clinicSource === 'code' && (
+                    <span className="ml-2 font-normal text-[12px] text-warn-ink">
+                      (ดึงรายชื่อจากฐานข้อมูลไม่ได้ ใช้รายชื่อสำรองในโค้ดแทน)
+                    </span>
+                  )}
+                </h3>
                 <ClinicChips
                   clinics={result.clinics}
                   picked={picked}
@@ -267,7 +293,7 @@ export function UploadPage() {
                 />
                 {extraClinics.length > 0 && (
                   <div className="text-[12.5px] text-warn-ink bg-warn-bg border border-warn-line rounded-lg px-3 py-2 mt-3">
-                    มีคลินิกนอก {NCD_CLINICS.length} รายการของ NCD ถูกติ๊กไว้ด้วย:{' '}
+                    มีคลินิกนอก {clinicNames.length} รายการของ NCD ถูกติ๊กไว้ด้วย:{' '}
                     {extraClinics.join(' · ')} — ถ้าไม่ตั้งใจ
                     ให้เอาติ๊กออกก่อนส่ง เพราะยอดจะถูกนับรวมในปฏิทิน
                   </div>

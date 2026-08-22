@@ -101,6 +101,80 @@ export async function fetchLatestUpload(): Promise<UploadLog | null> {
   }
 }
 
+/** รายชื่อคลินิกที่นับรวม พร้อมช่วงเวลาที่ยังเปิดอยู่ */
+export type ClinicConfig = {
+  clinic_name: string
+  /** เริ่มนับตั้งแต่วันนี้ ถ้าเป็น null คือนับมาตลอด */
+  active_from: string | null
+  /** นับถึงวันนี้เป็นวันสุดท้าย ถ้าเป็น null คือยังไม่มีกำหนดปิด */
+  active_until: string | null
+  sort_order: number
+}
+
+export type Holiday = {
+  holiday_date: string
+  title: string
+  note: string | null
+}
+
+/** รายชื่อคลินิกจากฐานข้อมูล เรียงตาม sort_order */
+export async function fetchClinics(): Promise<ClinicConfig[]> {
+  const db = client()
+  try {
+    const { data, error } = await db
+      .from('clinic_config')
+      .select('clinic_name, active_from, active_until, sort_order')
+      .order('sort_order', { ascending: true })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as ClinicConfig[]
+  } catch (e) {
+    throw asDataError(e, 'ดึงรายชื่อคลินิก')
+  }
+}
+
+/** วันหยุดทั้งหมดในระบบ เรียงตามวันที่ */
+export async function fetchHolidays(): Promise<Holiday[]> {
+  const db = client()
+  try {
+    const { data, error } = await db
+      .from('holidays')
+      .select('holiday_date, title, note')
+      .order('holiday_date', { ascending: true })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Holiday[]
+  } catch (e) {
+    throw asDataError(e, 'ดึงวันหยุด')
+  }
+}
+
+/**
+ * เพิ่มหรือแก้วันหยุดหนึ่งวัน — ส่ง title ว่างเพื่อลบวันหยุดวันนั้น
+ * ฟังก์ชันฝั่งฐานข้อมูลตรวจรหัสอัปโหลดเอง
+ */
+export async function setHoliday(
+  uploadKey: string,
+  date: string,
+  title: string,
+  note?: string | null,
+): Promise<void> {
+  const db = client()
+  const { error } = await db.rpc('set_holiday', {
+    p_key: uploadKey,
+    p_date: date,
+    p_title: title || null,
+    p_note: note || null,
+  })
+  if (!error) return
+
+  if (isBadKeyError(error)) {
+    throw new DataError(
+      'รหัสอัปโหลดไม่ถูกต้อง',
+      'ตรวจรหัสอีกครั้ง ระวังปุ่ม Caps Lock และช่องว่างท้ายรหัส หากจำไม่ได้ให้ถามผู้ดูแลระบบ — รายการวันหยุดเดิมยังอยู่ครบ ไม่มีอะไรถูกแก้',
+    )
+  }
+  throw asDataError(new Error(error.message), title ? 'บันทึกวันหยุด' : 'ลบวันหยุด')
+}
+
 export type ReplaceResult = {
   days: number
   total: number

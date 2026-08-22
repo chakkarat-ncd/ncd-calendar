@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom'
 const TABS = [
   { to: '/', label: 'ปฏิทิน' },
   { to: '/upload', label: 'อัปโหลด' },
+  { to: '/holidays', label: 'วันหยุด' },
   { to: '/local', label: 'ดูจากไฟล์' },
 ]
 

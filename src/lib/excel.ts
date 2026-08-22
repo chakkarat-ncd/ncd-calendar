@@ -58,7 +58,10 @@ function readAsArrayBuffer(file: File): Promise<ArrayBuffer> {
  * อ่านไฟล์นัดจาก HosXP ในเบราว์เซอร์
  * คืนเฉพาะชื่อคลินิกกับวันที่นัด คอลัมน์อื่นในไฟล์ถูกทิ้งทั้งหมดตั้งแต่ขั้นนี้
  */
-export async function readAppointmentFile(file: File): Promise<ParseResult> {
+export async function readAppointmentFile(
+  file: File,
+  expected: readonly string[] = NCD_CLINICS,
+): Promise<ParseResult> {
   const buf = await readAsArrayBuffer(file)
 
   let wb: XLSX.WorkBook
@@ -150,7 +153,7 @@ export async function readAppointmentFile(file: File): Promise<ParseResult> {
     .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'th'))
 
   const found = new Set(counts.keys())
-  const ncdMissing = NCD_CLINICS.filter((c) => !found.has(c))
+  const ncdMissing = expected.filter((c) => !found.has(c))
 
   return {
     fileName: file.name,
@@ -166,8 +169,14 @@ export async function readAppointmentFile(file: File): Promise<ParseResult> {
   }
 }
 
-/** คลินิก NCD ที่พบจริงในไฟล์ ใช้ติ๊กเลือกให้อัตโนมัติ */
-export function defaultPicked(clinics: ClinicTally[]): Set<string> {
-  const ncd = new Set<string>(NCD_CLINICS)
-  return new Set(clinics.filter((c) => ncd.has(c.name)).map((c) => c.name))
+/**
+ * คลินิกที่พบจริงในไฟล์และอยู่ในรายชื่อที่ควรนับ ใช้ติ๊กเลือกให้อัตโนมัติ
+ * expected มาจากตาราง clinic_config ถ้าต่อฐานข้อมูลได้ ไม่งั้นใช้รายชื่อสำรองในโค้ด
+ */
+export function defaultPicked(
+  clinics: ClinicTally[],
+  expected: readonly string[] = NCD_CLINICS,
+): Set<string> {
+  const want = new Set<string>(expected)
+  return new Set(clinics.filter((c) => want.has(c.name)).map((c) => c.name))
 }

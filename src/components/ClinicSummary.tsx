@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { NCD_CLINICS } from '../lib/constants'
+import { activeClinicsOn } from '../lib/counts'
+import { dateKey, fmt, keyToDate, today } from '../lib/date'
+import type { ClinicConfig } from '../lib/supabase'
 
 /**
  * บอกว่ายอดที่เห็นบนหน้าปฏิทินครอบคลุมคลินิกอะไรบ้าง
+ * แสดงเฉพาะคลินิกที่ยังเปิดอยู่ ณ วันนี้ ตามตาราง clinic_config
  * จอกว้างกางรายชื่อไว้เลย ส่วนมือถือย่อเป็นปุ่มให้กดกางเอง จะได้ไม่กินพื้นที่
  */
-export function ClinicSummary() {
+export function ClinicSummary({ clinics }: { clinics: ClinicConfig[] }) {
   const [open, setOpen] = useState(false)
-  const lead = `นับรวม ${NCD_CLINICS.length} คลินิก`
+  const active = activeClinicsOn(clinics, dateKey(today()))
+  if (!active.length) return null
+
+  const lead = `นับรวม ${active.length} คลินิก`
 
   return (
     <div className="mb-2.5">
@@ -28,13 +34,19 @@ export function ClinicSummary() {
         <span className="hidden sm:inline text-[13.5px] font-medium text-ink-2">{lead}</span>
 
         <div className={(open ? 'flex' : 'hidden') + ' sm:flex flex-wrap gap-1.5 w-full sm:w-auto'}>
-          {NCD_CLINICS.map((c) => (
+          {active.map((c) => (
             <span
-              key={c}
-              className="inline-block bg-[#EAF3F2] border border-[#C4DCDA] text-teal
+              key={c.clinic_name}
+              className="inline-flex items-baseline gap-1 bg-[#EAF3F2] border border-[#C4DCDA] text-teal
                          rounded-full px-[9px] py-[2px] text-[12.5px] leading-[1.5]"
             >
-              {c}
+              {c.clinic_name}
+              {c.active_until && (
+                // คลินิกที่มีกำหนดปิด ต้องบอกให้ทีมรู้ว่าเลยวันนี้ไปจะไม่ถูกนับแล้ว
+                <span className="text-[11px] text-warn-ink font-medium">
+                  ถึง {fmt(keyToDate(c.active_until))}
+                </span>
+              )}
             </span>
           ))}
         </div>

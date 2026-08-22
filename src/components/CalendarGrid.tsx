@@ -31,18 +31,34 @@ const BAR: Record<Level, string> = {
 
 /** ข้อความเมื่อชี้ที่ช่องวัน บอกเพดานของวันนั้นด้วย เพราะศุกร์ใช้คนละเกณฑ์กับวันอื่น */
 function tip(x: DayCount): string {
+  const head = fmt(x.date)
+
+  if (x.closed) {
+    const what = x.holiday ? `วันหยุด — ${x.holiday}` : 'เสาร์อาทิตย์ ไม่มีคลินิก'
+    if (x.n === 0) return `${head} — ${what}`
+    return `${head} — ${what} · แต่มีนัดอยู่ ${x.n} ราย ตรวจว่าลงนัดผิดวันหรือไม่`
+  }
+
   const cap = limitOf(x.date).cap
-  const head = `${fmt(x.date)} (เพดาน ${cap})`
-  if (x.n === 0) return `${head} — ไม่มีนัด`
+  const withCap = `${head} (เพดาน ${cap})`
+  if (x.n === 0) return `${withCap} — ไม่มีนัด`
   const over = overflowOf(x)
-  if (over > 0) return `${head} — ${x.n} นัด เกินเพดาน ${over} ราย`
-  return `${head} — ${x.n} นัด รับได้อีก ${remainingOf(x)} ราย`
+  if (over > 0) return `${withCap} — ${x.n} นัด เกินเพดาน ${over} ราย`
+  return `${withCap} — ${x.n} นัด รับได้อีก ${remainingOf(x)} ราย`
 }
 
 function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
   const lv = levelOfDay(x)
   // แถบเทียบกับเพดานของวันนั้น ศุกร์ 30 นัดจึงดูเต็มกว่าพุธ 30 นัด ตามความจริง
   const pct = Math.min(100, Math.round((x.n / limitOf(x.date).cap) * 100))
+
+  // วันหยุดกับเสาร์อาทิตย์ใช้พื้นเทาเข้มกว่าปกติ ให้ต่างจากวันทำการที่ไม่มีนัดชัดเจน
+  const closedBox = 'bg-[#D9D5CB] border-[#C0B9A9]'
+  const box = x.closed ? closedBox : CELL[lv]
+
+  // ถ้าวันหยุดมีนัด ห้ามซ่อนตัวเลข ต้องเด่นกว่าปกติเพราะอาจลงนัดผิดวัน
+  const misbooked = x.closed && x.n > 0
+
   return (
     <div
       title={tip(x)}
@@ -50,24 +66,45 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
         // ปล่อยให้ aspect-square เป็นตัวกำหนดขนาด ช่องจึงย่อตามคอลัมน์ของเดือนได้เอง
         // min-h เหลือไว้เป็นพื้นแค่กันช่องแบนตอนจอแคบมาก ไม่ให้ไปสู้กับ aspect-square
         'aspect-square rounded-[9px] border p-1 sm:p-1.5 xl:p-1 flex flex-col justify-between ' +
-        'min-h-[42px] ' +
-        CELL[lv] +
+        'min-h-[42px] overflow-hidden ' +
+        box +
         (isToday ? ' outline outline-2 outline-ink outline-offset-1' : '')
       }
     >
-      <div className="font-mono text-[11px] sm:text-[11.5px] text-muted leading-none">
-        {x.date.getDate()}
+      <div className="flex items-start justify-between gap-0.5 leading-none">
+        <span
+          className={`font-mono text-[11px] sm:text-[11.5px] ${
+            x.closed ? 'text-[#8A8478]' : 'text-muted'
+          }`}
+        >
+          {x.date.getDate()}
+        </span>
+        {misbooked && <span className="text-[10px] leading-none text-bad">⚠</span>}
       </div>
+
       <div
-        className={`font-mono font-semibold leading-none ${
-          lv === 'none' ? DASH_SIZE : VALUE_SIZE
-        } ${VALUE[lv]}`}
+        className={
+          'font-mono font-semibold leading-none ' +
+          (misbooked
+            ? `${VALUE_SIZE} text-bad`
+            : x.closed
+              ? `${DASH_SIZE} text-[#A9A296]`
+              : `${lv === 'none' ? DASH_SIZE : VALUE_SIZE} ${VALUE[lv]}`)
+        }
       >
         {x.n || '–'}
       </div>
-      <div className="h-[3px] rounded-[2px] bg-[#E8E5DE] overflow-hidden">
-        {x.n > 0 && <i className={`block h-full rounded-[2px] ${BAR[lv]}`} style={{ width: `${pct}%` }} />}
-      </div>
+
+      {x.closed ? (
+        // ชื่อวันหยุดแบบย่อ ข้อความเต็มอยู่ใน tooltip เพราะช่องเล็กเกินกว่าจะใส่ทั้งชื่อ
+        <div className="text-[9px] leading-[1.15] text-[#7C7669] truncate">{x.holiday ?? ''}</div>
+      ) : (
+        <div className="h-[3px] rounded-[2px] bg-[#E8E5DE] overflow-hidden">
+          {x.n > 0 && (
+            <i className={`block h-full rounded-[2px] ${BAR[lv]}`} style={{ width: `${pct}%` }} />
+          )}
+        </div>
+      )}
     </div>
   )
 }

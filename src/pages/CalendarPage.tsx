@@ -11,9 +11,12 @@ import { tallyRowsByDay, type CountRow } from '../lib/counts'
 import { daysBetween, fmtDateTime } from '../lib/date'
 import {
   DataError,
+  fetchClinics,
   fetchCounts,
+  fetchHolidays,
   fetchLatestUpload,
   supabaseConfigured,
+  type ClinicConfig,
   type UploadLog,
 } from '../lib/supabase'
 
@@ -23,6 +26,8 @@ const REFRESH_MS = 5 * 60 * 1000
 export function CalendarPage() {
   const [rows, setRows] = useState<CountRow[]>([])
   const [log, setLog] = useState<UploadLog | null>(null)
+  const [clinics, setClinics] = useState<ClinicConfig[]>([])
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map())
   const [range, setRange] = useState<RangeOption>(DEFAULT_RANGE)
   const [error, setError] = useState<DataError | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,9 +39,16 @@ export function CalendarPage() {
     inFlight.current = true
     if (showSpinner) setLoading(true)
     try {
-      const [counts, latest] = await Promise.all([fetchCounts(), fetchLatestUpload()])
+      const [counts, latest, cfg, hol] = await Promise.all([
+        fetchCounts(),
+        fetchLatestUpload(),
+        fetchClinics(),
+        fetchHolidays(),
+      ])
       setRows(counts)
       setLog(latest)
+      setClinics(cfg)
+      setHolidays(new Map(hol.map((h) => [h.holiday_date, h.title])))
       setLoadedAt(new Date())
       setError(null)
     } catch (e) {
@@ -70,7 +82,7 @@ export function CalendarPage() {
     }
   }, [load])
 
-  const counts = tallyRowsByDay(rows)
+  const counts = tallyRowsByDay(rows, clinics)
   const uploadedAt = log ? new Date(log.uploaded_at) : null
   const staleDays = uploadedAt ? daysBetween(uploadedAt, new Date()) : null
   const stale = staleDays !== null && staleDays > STALE_DAYS
@@ -118,7 +130,7 @@ export function CalendarPage() {
             </Message>
           )}
 
-          <ClinicSummary />
+          <ClinicSummary clinics={clinics} />
 
           {uploadedAt && (
             <FreshnessBar
@@ -130,7 +142,7 @@ export function CalendarPage() {
             />
           )}
 
-          <CalendarView counts={counts} range={range} onRange={setRange} />
+          <CalendarView counts={counts} range={range} onRange={setRange} holidays={holidays} />
         </>
       )}
 

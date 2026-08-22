@@ -3,7 +3,21 @@ import type { SheetRow } from './excel'
 import { addDays, atMidnight, dateKey, daysBetween, keyToDate } from './date'
 
 /** ยอดนัดของหนึ่งวัน */
-export type DayCount = { key: string; date: Date; n: number }
+export type DayCount = {
+  key: string
+  date: Date
+  n: number
+  /** ชื่อวันหยุดนักขัตฤกษ์ ถ้าวันนั้นอยู่ในตาราง holidays */
+  holiday: string | null
+  /** วันที่คลินิกไม่เปิด คือเสาร์อาทิตย์หรือวันหยุดนักขัตฤกษ์ */
+  closed: boolean
+}
+
+/** เสาร์กับอาทิตย์ */
+function isWeekend(d: Date): boolean {
+  const w = d.getDay()
+  return w === 0 || w === 6
+}
 
 /** ระดับสีของช่องปฏิทิน — เกณฑ์เดียวกับไฟล์ต้นแบบ */
 export type Level = 'none' | 'ok' | 'warn' | 'bad'
@@ -46,14 +60,43 @@ export function tallyByDay(rows: SheetRow[], picked: Set<string>): Map<string, n
   return m
 }
 
-/** รวมยอดรายวันจากยอดที่ดึงมาจาก Supabase ซึ่งแยกตามคลินิกอยู่แล้ว */
-export function tallyRowsByDay(rows: CountRow[], picked?: Set<string>): Map<string, number> {
+/** ช่วงเวลาที่คลินิกหนึ่งยังเปิดอยู่ — รูปแบบเดียวกับตาราง clinic_config */
+export type ClinicWindow = {
+  clinic_name: string
+  active_from: string | null
+  active_until: string | null
+}
+
+/**
+ * คลินิกนี้ยังเปิดอยู่ในวันนั้นหรือไม่
+ * คีย์วันที่เป็น YYYY-MM-DD จึงเทียบเป็นข้อความได้ตรง ๆ โดยไม่ต้องแปลงเป็น Date
+ */
+export function isClinicActiveOn(c: ClinicWindow, dayKey: string): boolean {
+  if (c.active_from && dayKey < c.active_from) return false
+  if (c.active_until && dayKey > c.active_until) return false
+  return true
+}
+
+/**
+ * รวมยอดรายวันจากยอดที่ดึงมาจาก Supabase ซึ่งแยกตามคลินิกอยู่แล้ว
+ *
+ * กรองรายวัน ไม่ใช่กรองทั้งชุด เพราะคลินิกที่มีวันสิ้นสุดจะยังถูกนับในวันก่อนหน้า
+ * เช่นคลินิก วาร์ฟาริน ที่ปิดสิ้นเดือนกันยายน เดือนกันยายนยังนับ ตุลาคมไม่นับ
+ */
+export function tallyRowsByDay(rows: CountRow[], clinics: ClinicWindow[]): Map<string, number> {
+  const byName = new Map(clinics.map((c) => [c.clinic_name, c]))
   const m = new Map<string, number>()
   rows.forEach((r) => {
-    if (picked && !picked.has(r.c)) return
+    const c = byName.get(r.c)
+    if (!c || !isClinicActiveOn(c, r.d)) return
     m.set(r.d, (m.get(r.d) ?? 0) + r.n)
   })
   return m
+}
+
+/** คลินิกที่ยังเปิดอยู่ ณ วันที่กำหนด ใช้กับแถบบอกว่านับรวมคลินิกอะไรบ้าง */
+export function activeClinicsOn<T extends ClinicWindow>(clinics: T[], dayKey: string): T[] {
+  return clinics.filter((c) => isClinicActiveOn(c, dayKey))
 }
 
 /** ยุบเป็น วันที่ + คลินิก + จำนวน สำหรับส่งขึ้นระบบ นับเฉพาะตั้งแต่ from เป็นต้นไป */
@@ -100,13 +143,28 @@ export function resolveDays(
   return Math.min(MAX_ALL_DAYS, Math.max(1, daysBetween(from, lastDate) + 1))
 }
 
-/** ไล่วันตั้งแต่ from ไปข้างหน้า days วัน พร้อมยอดของแต่ละวัน */
-export function buildDayList(counts: Map<string, number>, from: Date, days: number): DayCount[] {
+/**
+ * ไล่วันตั้งแต่ from ไปข้างหน้า days วัน พร้อมยอดของแต่ละวัน
+ * holidays เป็นแผนที่จากคีย์วันที่ไปหาชื่อวันหยุด
+ */
+export function buildDayList(
+  counts: Map<string, number>,
+  from: Date,
+  days: number,
+  holidays?: Map<string, string>,
+): DayCount[] {
   const list: DayCount[] = []
   for (let i = 0; i < days; i++) {
     const date = addDays(from, i)
     const key = dateKey(date)
-    list.push({ key, date, n: counts.get(key) ?? 0 })
+    const holiday = holidays?.get(key) ?? null
+    list.push({
+      key,
+      date,
+      n: counts.get(key) ?? 0,
+      holiday,
+      closed: holiday !== null || isWeekend(date),
+    })
   }
   return list
 }
@@ -122,15 +180,21 @@ export type Summary = {
   free: DayCount[]
   /** วันที่ยังรับนัดเพิ่มได้ คือยังไม่เกินเพดานของวันนั้น */
   available: DayCount[]
+  /** วันหยุดหรือเสาร์อาทิตย์ที่กลับมีนัด อาจเป็นการลงนัดผิดวัน */
+  misbooked: DayCount[]
   total: number
 }
 
 /**
  * ทุกกลุ่มแยกด้วย levelOf ตัวเดียวกับที่ระบายสีปฏิทิน
  * ตัวเลขสรุปกับสีในปฏิทินจึงตรงกันเสมอ แม้เกณฑ์ของแต่ละวันจะต่างกัน
+ *
+ * วันหยุดและเสาร์อาทิตย์ไม่ถูกนับว่าเป็นวันที่มีนัด และไม่เข้าตารางวันที่ยังรับได้
+ * แต่ถ้าวันหยุดกลับมีนัดอยู่ จะถูกแยกไว้ใน misbooked เพื่อให้เห็น ไม่ใช่หายไปเฉย ๆ
  */
 export function summarize(list: DayCount[]): Summary {
-  const has = list.filter((x) => x.n > 0)
+  const withAppt = list.filter((x) => x.n > 0)
+  const has = withAppt.filter((x) => !x.closed)
   const at = new Map(has.map((x) => [x.key, levelOfDay(x)]))
   return {
     has,
@@ -138,8 +202,26 @@ export function summarize(list: DayCount[]): Summary {
     near: has.filter((x) => at.get(x.key) === 'warn'),
     free: has.filter((x) => at.get(x.key) === 'ok'),
     available: has.filter((x) => at.get(x.key) !== 'bad'),
+    misbooked: withAppt.filter((x) => x.closed),
     total: has.reduce((s, x) => s + x.n, 0),
   }
+}
+
+/**
+ * ปี พ.ศ. ที่อยู่ในช่วงที่แสดง แต่ยังไม่มีวันหยุดในระบบเลยสักวัน
+ * ใช้เตือนว่าวันหยุดของปีนั้นจะโผล่มาเป็นวันทำการปกติ
+ */
+export function yearsMissingHolidays(list: DayCount[], holidayKeys: Iterable<string>): number[] {
+  const haveYears = new Set<number>()
+  for (const k of holidayKeys) haveYears.add(Number(k.slice(0, 4)))
+
+  const shownYears = new Set<number>()
+  list.forEach((x) => shownYears.add(x.date.getFullYear()))
+
+  return [...shownYears]
+    .filter((y) => !haveYears.has(y))
+    .sort((a, b) => a - b)
+    .map((y) => y + 543)
 }
 
 /** จำนวนนัดที่อยู่เลยช่วงที่กำลังแสดง ใช้เตือนให้กด "ทั้งหมด" */

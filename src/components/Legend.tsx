@@ -6,6 +6,7 @@ const ITEMS = [
   { cls: 'bg-warn-bg border-warn-line', label: `${NORMAL_LIMIT.green + 1}–${NORMAL_LIMIT.cap}` },
   { cls: 'bg-bad-bg border-bad-line', label: `เกิน ${NORMAL_LIMIT.cap}` },
   { cls: 'bg-none-bg border-line', label: 'ไม่มีนัด' },
+  { cls: 'bg-[#D9D5CB] border-[#C0B9A9]', label: 'วันหยุด' },
 ]
 
 /** คำอธิบายสีแบบบรรทัดเดียว รวมหมายเหตุวันศุกร์ไว้ในแถวเดียวกันเพื่อประหยัดพื้นที่แนวตั้ง */
