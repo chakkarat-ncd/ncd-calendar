@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarView } from '../components/CalendarView'
+import { ClinicSummary } from '../components/ClinicSummary'
 import { Footer } from '../components/Footer'
+import { FreshnessBar } from '../components/FreshnessBar'
 import { Header } from '../components/Header'
 import { Message } from '../components/Message'
 import { DEFAULT_RANGE, STALE_DAYS, type RangeOption } from '../lib/constants'
@@ -75,7 +77,7 @@ export function CalendarPage() {
 
   return (
     <div className="max-w-[1180px] xl:max-w-[1440px] mx-auto px-[18px] pt-[22px] pb-[70px]">
-      <Header subtitle="โรงพยาบาลจักราช · เพดาน 80 นัดต่อวัน · ทุกจอเห็นยอดชุดเดียวกัน" />
+      <Header subtitle="โรงพยาบาลจักราช · เพดาน 80 นัดต่อวัน · ศุกร์ 60 เพราะเป็นคลินิก CKD" />
 
       {error ? (
         <>
@@ -116,21 +118,16 @@ export function CalendarPage() {
             </Message>
           )}
 
+          <ClinicSummary />
+
           {uploadedAt && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-2 mb-[18px]">
-              <span className={`w-2 h-2 rounded-full ${stale ? 'bg-warn' : 'bg-ok'}`} />
-              <span>
-                อัปเดตล่าสุด {fmtDateTime(uploadedAt)} โดย {log?.uploaded_by || 'ไม่ระบุชื่อ'}
-              </span>
-              <button
-                type="button"
-                className="rb"
-                onClick={() => void load(true)}
-                disabled={loading}
-              >
-                {loading ? 'กำลังโหลด…' : 'โหลดใหม่'}
-              </button>
-            </div>
+            <FreshnessBar
+              uploadedAt={uploadedAt}
+              uploadedBy={log?.uploaded_by ?? ''}
+              days={staleDays ?? 0}
+              loading={loading}
+              onReload={() => void load(true)}
+            />
           )}
 
           <CalendarView counts={counts} range={range} onRange={setRange} />

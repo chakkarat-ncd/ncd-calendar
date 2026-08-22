@@ -1,5 +1,5 @@
-import { CAP, TH_M, TH_D_MON_FIRST } from '../lib/constants'
-import { levelOf, type DayCount, type Level } from '../lib/counts'
+import { limitOf, TH_M, TH_D_MON_FIRST } from '../lib/constants'
+import { levelOfDay, overflowOf, remainingOf, type DayCount, type Level } from '../lib/counts'
 import { dateKey, fmt, padBeforeMonday, today } from '../lib/date'
 
 const CELL: Record<Level, string> = {
@@ -29,15 +29,20 @@ const BAR: Record<Level, string> = {
   bad: 'bg-bad',
 }
 
+/** ข้อความเมื่อชี้ที่ช่องวัน บอกเพดานของวันนั้นด้วย เพราะศุกร์ใช้คนละเกณฑ์กับวันอื่น */
 function tip(x: DayCount): string {
-  if (x.n === 0) return `${fmt(x.date)} — ไม่มีนัด`
-  if (x.n > CAP) return `${fmt(x.date)} — เกินเพดาน ${x.n - CAP} ราย`
-  return `${fmt(x.date)} — รับได้อีก ${CAP - x.n} ราย`
+  const cap = limitOf(x.date).cap
+  const head = `${fmt(x.date)} (เพดาน ${cap})`
+  if (x.n === 0) return `${head} — ไม่มีนัด`
+  const over = overflowOf(x)
+  if (over > 0) return `${head} — ${x.n} นัด เกินเพดาน ${over} ราย`
+  return `${head} — ${x.n} นัด รับได้อีก ${remainingOf(x)} ราย`
 }
 
 function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
-  const lv = levelOf(x.n)
-  const pct = Math.min(100, Math.round((x.n / CAP) * 100))
+  const lv = levelOfDay(x)
+  // แถบเทียบกับเพดานของวันนั้น ศุกร์ 30 นัดจึงดูเต็มกว่าพุธ 30 นัด ตามความจริง
+  const pct = Math.min(100, Math.round((x.n / limitOf(x.date).cap) * 100))
   return (
     <div
       title={tip(x)}

@@ -24,8 +24,9 @@ export function StatCards({ summary, days }: { summary: Summary; days: number })
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-[18px]">
       <Stat n={summary.has.length} label={`วันที่มีนัด${span}`} />
-      <Stat n={summary.over.length} label="วันที่เกินเพดาน 80" tone="bad" />
-      <Stat n={summary.near.length} label="วันที่ใกล้เต็ม 61–80" tone="warn" />
+      {/* ไม่ระบุตัวเลขเกณฑ์ตรงนี้ เพราะแต่ละวันในสัปดาห์ใช้เกณฑ์ไม่เท่ากัน */}
+      <Stat n={summary.over.length} label="วันที่เกินเพดาน" tone="bad" />
+      <Stat n={summary.near.length} label="วันที่ใกล้เต็ม" tone="warn" />
       <Stat n={summary.free.length} label="วันที่ยังรับได้สบาย" tone="ok" />
     </div>
   )

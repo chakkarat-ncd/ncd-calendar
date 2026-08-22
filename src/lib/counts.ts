@@ -1,4 +1,4 @@
-import { CAP, WARN } from './constants'
+import { limitOf } from './constants'
 import type { SheetRow } from './excel'
 import { addDays, atMidnight, dateKey, daysBetween, keyToDate } from './date'
 
@@ -8,11 +8,28 @@ export type DayCount = { key: string; date: Date; n: number }
 /** ระดับสีของช่องปฏิทิน — เกณฑ์เดียวกับไฟล์ต้นแบบ */
 export type Level = 'none' | 'ok' | 'warn' | 'bad'
 
-export function levelOf(n: number): Level {
+/** ระดับสีของยอด n ในวันที่ date — เกณฑ์ต่างกันตามวันในสัปดาห์ */
+export function levelOf(n: number, date: Date): Level {
   if (n === 0) return 'none'
-  if (n > CAP) return 'bad'
-  if (n > WARN) return 'warn'
+  const { green, cap } = limitOf(date)
+  if (n > cap) return 'bad'
+  if (n > green) return 'warn'
   return 'ok'
+}
+
+/** ระดับสีของทั้งวัน */
+export function levelOfDay(x: DayCount): Level {
+  return levelOf(x.n, x.date)
+}
+
+/** รับได้อีกกี่ราย เทียบเพดานของวันนั้น ไม่ติดลบ */
+export function remainingOf(x: DayCount): number {
+  return Math.max(0, limitOf(x.date).cap - x.n)
+}
+
+/** เกินเพดานของวันนั้นไปกี่ราย ไม่ติดลบ */
+export function overflowOf(x: DayCount): number {
+  return Math.max(0, x.n - limitOf(x.date).cap)
 }
 
 /** แถวที่ส่งขึ้น Supabase — วันที่ + ชื่อคลินิก + จำนวน เท่านั้น */
@@ -97,25 +114,30 @@ export function buildDayList(counts: Map<string, number>, from: Date, days: numb
 export type Summary = {
   /** วันที่มีนัดในช่วงที่แสดง */
   has: DayCount[]
-  /** เกินเพดาน 80 */
+  /** เกินเพดานของวันนั้น */
   over: DayCount[]
-  /** ใกล้เต็ม 61–80 */
+  /** ใกล้เต็ม อยู่ระหว่างเกณฑ์เขียวกับเพดานของวันนั้น */
   near: DayCount[]
-  /** ยังรับได้สบาย ไม่เกิน 60 */
+  /** ยังรับได้สบาย ไม่เกินเกณฑ์เขียวของวันนั้น */
   free: DayCount[]
-  /** วันที่ยังรับนัดเพิ่มได้ คือยังไม่เกินเพดาน */
+  /** วันที่ยังรับนัดเพิ่มได้ คือยังไม่เกินเพดานของวันนั้น */
   available: DayCount[]
   total: number
 }
 
+/**
+ * ทุกกลุ่มแยกด้วย levelOf ตัวเดียวกับที่ระบายสีปฏิทิน
+ * ตัวเลขสรุปกับสีในปฏิทินจึงตรงกันเสมอ แม้เกณฑ์ของแต่ละวันจะต่างกัน
+ */
 export function summarize(list: DayCount[]): Summary {
   const has = list.filter((x) => x.n > 0)
+  const at = new Map(has.map((x) => [x.key, levelOfDay(x)]))
   return {
     has,
-    over: has.filter((x) => x.n > CAP),
-    near: has.filter((x) => x.n > WARN && x.n <= CAP),
-    free: has.filter((x) => x.n <= WARN),
-    available: has.filter((x) => x.n <= CAP),
+    over: has.filter((x) => at.get(x.key) === 'bad'),
+    near: has.filter((x) => at.get(x.key) === 'warn'),
+    free: has.filter((x) => at.get(x.key) === 'ok'),
+    available: has.filter((x) => at.get(x.key) !== 'bad'),
     total: has.reduce((s, x) => s + x.n, 0),
   }
 }
