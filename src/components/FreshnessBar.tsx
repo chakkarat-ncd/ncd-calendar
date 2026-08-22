@@ -58,7 +58,7 @@ export function FreshnessBar({
     // สามคอลัมน์ ตัวถ่วงซ้ายกับปุ่มขวากว้างเท่ากันไม่ได้ แต่ 1fr ทั้งคู่ทำให้ตรงกลางอยู่กึ่งกลางจริง
     <div
       className={
-        'rounded-[12px] border px-4 py-3 mb-[18px] grid gap-2 items-center ' +
+        'rounded-[12px] border px-4 py-2.5 mb-2.5 grid gap-2 items-center ' +
         'sm:grid-cols-[1fr_auto_1fr] ' +
         t.box
       }

@@ -10,7 +10,7 @@ export function ClinicSummary() {
   const lead = `นับรวม ${NCD_CLINICS.length} คลินิก`
 
   return (
-    <div className="mb-[18px]">
+    <div className="mb-2.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {/* มือถือ: กดเพื่อกาง */}
         <button

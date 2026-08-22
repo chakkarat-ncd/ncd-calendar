@@ -76,7 +76,7 @@ export function CalendarPage() {
   const stale = staleDays !== null && staleDays > STALE_DAYS
 
   return (
-    <div className="max-w-[1180px] xl:max-w-[1440px] mx-auto px-[18px] pt-[22px] pb-[70px]">
+    <div className="max-w-[1180px] xl:max-w-[1440px] mx-auto px-[18px] pt-4 pb-[70px]">
       <Header subtitle="โรงพยาบาลจักราช · เพดาน 80 นัดต่อวัน · ศุกร์ 60 เพราะเป็นคลินิก CKD" />
 
       {error ? (

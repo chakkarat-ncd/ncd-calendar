@@ -1,17 +1,11 @@
 import type { RangeOption } from '../lib/constants'
-import {
-  buildDayList,
-  countBeyond,
-  maxDateOf,
-  resolveDays,
-  summarize,
-} from '../lib/counts'
+import { buildDayList, countBeyond, maxDateOf, resolveDays, summarize } from '../lib/counts'
 import { addDays, today } from '../lib/date'
 import { CalendarGrid } from './CalendarGrid'
 import { FreeTable } from './FreeTable'
 import { Legend } from './Legend'
-import { RangePicker } from './RangePicker'
-import { StatCards } from './StatCards'
+import { RangeButtons, RangeNote } from './RangePicker'
+import { SummaryLine } from './SummaryLine'
 
 /**
  * ส่วนแสดงผลปฏิทินที่ใช้ร่วมกันระหว่างหน้าหลักกับโหมดดูจากไฟล์
@@ -35,16 +29,14 @@ export function CalendarView({
 
   return (
     <>
-      <StatCards summary={summary} days={days} />
-
-      <RangePicker
-        value={range}
-        onChange={onRange}
-        from={from}
-        to={end}
-        days={days}
-        beyond={beyond}
-      />
+      {/* ตัวเลขสรุปกับปุ่มเลือกช่วงอยู่แถวเดียวกัน ปฏิทินจึงขึ้นมาอยู่สูงกว่าเดิม */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
+        <SummaryLine summary={summary} days={days} />
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:ml-auto">
+          <RangeButtons value={range} onChange={onRange} />
+          <RangeNote from={from} to={end} beyond={beyond} />
+        </div>
+      </div>
 
       <Legend />
 
