@@ -93,35 +93,73 @@ function groupByMonth(list: DayCount[]): Month[] {
   return out
 }
 
-/** ปฏิทินรายเดือน ตาราง 7 คอลัมน์ เริ่มวันจันทร์ */
+/** ช่องว่างระหว่างช่องวันที่ ใช้ทั้งแถวหัววันและตารางวัน จึงเรียงตรงคอลัมน์กันพอดี */
+const CELL_GAP = 'gap-[3px] sm:gap-[4px]'
+
+/** ปฏิทินรายเดือน ตาราง 7 คอลัมน์ เริ่มวันจันทร์ แต่ละเดือนเป็นการ์ดของตัวเอง */
 export function CalendarGrid({ list }: { list: DayCount[] }) {
-  const todayKey = dateKey(today())
+  const now = today()
+  const todayKey = dateKey(now)
   const months = groupByMonth(list)
 
   return (
     // วางเดือนข้างกันเมื่อจอกว้างพอ จะได้เห็นหลายเดือนโดยไม่ต้องเลื่อน
     // 1 คอลัมน์เมื่อแคบกว่า 900px · 2 คอลัมน์ที่ 900–1279px · 3 คอลัมน์ตั้งแต่ 1280px
-    <div className="grid grid-cols-1 min-[900px]:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-5 mb-[22px]">
-      {months.map((mo) => (
-        <section key={`${mo.y}-${mo.m}`}>
-          <h4 className="text-base font-semibold mb-2 pl-0.5">
-            {TH_M[mo.m]} {mo.y + 543}
-          </h4>
-          <div className="grid grid-cols-7 gap-[3px] sm:gap-[4px]">
-            {TH_D_MON_FIRST.map((d) => (
-              <div key={d} className="text-center text-xs text-muted font-medium py-[3px]">
-                {d}
+    <div className="grid grid-cols-1 min-[900px]:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-6 mb-[22px]">
+      {months.map((mo) => {
+        const isThisMonth = mo.y === now.getFullYear() && mo.m === now.getMonth()
+        return (
+          <section
+            key={`${mo.y}-${mo.m}`}
+            className="bg-card border border-line rounded-[12px] overflow-hidden"
+          >
+            {/* แถบหัวเดือน เดือนปัจจุบันเป็นพื้นเข้มตัวอักษรขาว เดือนอื่นเป็นพื้นเทาอ่อน */}
+            <div
+              className={
+                'flex items-baseline justify-between gap-2 px-3 py-[7px] ' +
+                (isThisMonth ? 'bg-ink text-white' : 'bg-[#EDEAE4] text-ink')
+              }
+            >
+              <h4 className="text-[17px] font-bold leading-tight">
+                {TH_M[mo.m]} {mo.y + 543}
+              </h4>
+              {isThisMonth && (
+                <span className="text-[11.5px] font-medium bg-white/20 rounded px-1.5 py-[1px] shrink-0">
+                  เดือนนี้
+                </span>
+              )}
+            </div>
+
+            {/* padding แนวนอนบางที่สุดเท่าที่ยังดูเป็นกรอบ เพื่อไม่ให้ช่องวันที่ถูกบีบ */}
+            <div className="px-1 pt-1.5 pb-1.5">
+              {/* หัววัน มีเส้นคั่นยาวต่อเนื่องใต้แถว แยกออกจากตารางวันที่ */}
+              <div className={`grid grid-cols-7 ${CELL_GAP} border-b border-line pb-1 mb-1.5`}>
+                {TH_D_MON_FIRST.map((d, i) => (
+                  <div
+                    key={d}
+                    className={
+                      'text-center text-xs font-medium ' +
+                      // ส กับ อา อยู่ท้ายแถวเพราะเริ่มนับที่วันจันทร์
+                      (i >= 5 ? 'text-line' : 'text-muted')
+                    }
+                  >
+                    {d}
+                  </div>
+                ))}
               </div>
-            ))}
-            {Array.from({ length: mo.pad }, (_, i) => (
-              <div key={`pad${i}`} />
-            ))}
-            {mo.days.map((x) => (
-              <Cell key={x.key} x={x} isToday={x.key === todayKey} />
-            ))}
-          </div>
-        </section>
-      ))}
+
+              <div className={`grid grid-cols-7 ${CELL_GAP}`}>
+                {Array.from({ length: mo.pad }, (_, i) => (
+                  <div key={`pad${i}`} />
+                ))}
+                {mo.days.map((x) => (
+                  <Cell key={x.key} x={x} isToday={x.key === todayKey} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
