@@ -71,7 +71,11 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
         (isToday ? ' outline outline-2 outline-ink outline-offset-1' : '')
       }
     >
-      <div className="flex items-start justify-between gap-0.5 leading-none">
+      {/*
+        แถวบนมีแค่เลขวันที่ ชิดขวา ส่วนยอดผู้ป่วยอยู่คนละบรรทัดข้างล่าง
+        จึงไม่ชนกันแม้ยอดจะเป็นเลขสามหลักในช่องแคบ
+      */}
+      <div className="flex items-start justify-end gap-1 leading-none">
         {/*
           เลขวันที่ต้องอ่านออกจากระยะนั่งทำงาน เคยมีพยาบาลอ่าน 10 เป็น 18
           ตัวช่วยหลักคือขนาด น้ำหนัก และสีที่เข้มขึ้น ส่วน font-day คือ JetBrains Mono
@@ -79,6 +83,7 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
           (รุ่นที่ Google Fonts ส่งมาไม่มีศูนย์ขีดทับ สั่ง slashed-zero ไปก็ไม่มีผล)
           tabular-nums ทำให้ทุกหลักกว้างเท่ากัน เลขสองหลักจึงเรียงตรงกันทุกช่อง
         */}
+        {misbooked && <span className="text-[11px] leading-none text-bad mr-auto">⚠</span>}
         <span
           className={`font-day tabular-nums font-bold text-[15px] sm:text-[16px] leading-none ${
             x.closed ? 'text-[#6B665C]' : 'text-ink'
@@ -86,7 +91,6 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
         >
           {x.date.getDate()}
         </span>
-        {misbooked && <span className="text-[11px] leading-none text-bad">⚠</span>}
       </div>
 
       <div
