@@ -32,6 +32,8 @@ export default {
       fontFamily: {
         sans: ["'IBM Plex Sans Thai'", 'sans-serif'],
         mono: ["'IBM Plex Mono'", 'monospace'],
+        // ใช้กับเลขวันที่ในช่องปฏิทินเท่านั้น เลข 0 มีจุดตรงกลางจึงไม่สับสนกับ 8
+        day: ["'JetBrains Mono'", "'IBM Plex Mono'", 'monospace'],
       },
     },
   },

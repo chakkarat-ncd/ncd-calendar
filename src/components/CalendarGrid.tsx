@@ -72,14 +72,21 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
       }
     >
       <div className="flex items-start justify-between gap-0.5 leading-none">
+        {/*
+          เลขวันที่ต้องอ่านออกจากระยะนั่งทำงาน เคยมีพยาบาลอ่าน 10 เป็น 18
+          ตัวช่วยหลักคือขนาด น้ำหนัก และสีที่เข้มขึ้น ส่วน font-day คือ JetBrains Mono
+          ซึ่งเลข 1 มีฐานและธง ส่วนเลข 8 คอดกลางชัด จึงแยกจาก 0 ที่เป็นวงรีเรียบได้
+          (รุ่นที่ Google Fonts ส่งมาไม่มีศูนย์ขีดทับ สั่ง slashed-zero ไปก็ไม่มีผล)
+          tabular-nums ทำให้ทุกหลักกว้างเท่ากัน เลขสองหลักจึงเรียงตรงกันทุกช่อง
+        */}
         <span
-          className={`font-mono text-[11px] sm:text-[11.5px] ${
-            x.closed ? 'text-[#8A8478]' : 'text-muted'
+          className={`font-day tabular-nums font-bold text-[15px] sm:text-[16px] leading-none ${
+            x.closed ? 'text-[#6B665C]' : 'text-ink'
           }`}
         >
           {x.date.getDate()}
         </span>
-        {misbooked && <span className="text-[10px] leading-none text-bad">⚠</span>}
+        {misbooked && <span className="text-[11px] leading-none text-bad">⚠</span>}
       </div>
 
       <div
