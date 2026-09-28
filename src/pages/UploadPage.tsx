@@ -259,6 +259,12 @@ export function UploadPage() {
 
           {result && (
             <>
+              {!result.roomColumn && (
+                <Message kind="warn" title="ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจ">
+                  ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจ จึงกรองนัดเจาะเลือดล่วงหน้าไม่ได้ ยอดที่ได้อาจสูงกว่าความจริง
+                </Message>
+              )}
+
               {(result.badDateCount > 0 || result.ncdMissing.length > 0) && (
                 <Message kind="warn" title="ข้อควรทราบเกี่ยวกับไฟล์นี้">
                   {result.badDateCount > 0 && (
@@ -321,6 +327,26 @@ export function UploadPage() {
                         หลังจากนั้นปฏิทินจะขึ้นว่าไม่มีนัดทั้งที่อาจมีนัดอยู่จริง — กลับไป export จาก HosXP
                         ให้ครอบคลุมอย่างน้อย 90 วัน หรือส่งต่อไปก่อนได้ถ้ารู้ว่าไฟล์นี้ถูกต้องแล้ว
                       </Message>
+                    )}
+
+                    {result.roomColumn && (
+                      <p className="text-muted text-[12.5px] mt-3">
+                        {result.excludedCount > 0 ? (
+                          <>
+                            กรองออก {result.excludedCount.toLocaleString()} รายการ (
+                            {result.excludedRooms
+                              .map((r) =>
+                                result.excludedRooms.length > 1
+                                  ? `${r.name} ${r.n.toLocaleString()}`
+                                  : r.name,
+                              )
+                              .join(' · ')}{' '}
+                            — นัดเจาะเลือดล่วงหน้า)
+                          </>
+                        ) : (
+                          'ไม่พบนัดเจาะเลือดล่วงหน้าในไฟล์นี้'
+                        )}
+                      </p>
                     )}
 
                     {pastCount > 0 && (

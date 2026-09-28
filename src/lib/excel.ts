@@ -13,6 +13,11 @@ export type ParseResult = {
   columns: string[]
   clinicColumn: string
   dateColumn: string
+  /** คอลัมน์ห้องตรวจที่ใช้กรองนัดเจาะเลือดล่วงหน้าของ รพ.สต. — null ถ้าไฟล์ไม่มีคอลัมน์นี้ */
+  roomColumn: string | null
+  /** แถวที่ถูกกรองออกเพราะเป็นนัดเจาะเลือดล่วงหน้าของ รพ.สต. แยกตามชื่อห้องตรวจ */
+  excludedRooms: ClinicTally[]
+  excludedCount: number
   rows: SheetRow[]
   /** คลินิกทุกชื่อที่พบในไฟล์ พร้อมจำนวนแถว เรียงจากมากไปน้อย */
   clinics: ClinicTally[]
@@ -38,6 +43,14 @@ export class SheetError extends Error {
 
 export const norm = (s: unknown): string =>
   String(s == null ? '' : s).replace(/\s+/g, ' ').trim()
+
+/**
+ * ห้องตรวจของ รพ.สต. — ผู้ป่วยกลุ่มนี้รับยาที่ รพ.สต. มีแต่ส่งเลือดมาตรวจ ไม่ได้มาคลินิกจริง
+ * ใช้คำว่า รพ.สต. อย่างเดียว (ตัดจุดและช่องว่างก่อนเทียบ) ห้ามใช้ PCU หรือ สอ.
+ * เพราะ "PCU หน้าห้องตรวจ" เป็นจุดบริการในโรงพยาบาล
+ */
+export const isSubdistrictHospitalRoom = (room: string): boolean =>
+  room.replace(/[.\s]/g, '').includes('รพสต')
 
 function readAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -117,14 +130,26 @@ export async function readAppointmentFile(
     )
   }
 
+  const roomCol =
+    columns.find((c) => c === 'ห้องตรวจ') ?? columns.find((c) => c.includes('ห้องตรวจ')) ?? null
+
   const clinicKey = byNorm.get(clinicCol)!
   const dateKeyCol = byNorm.get(dateCol)!
+  const roomKey = roomCol ? byNorm.get(roomCol)! : null
 
   const rows: SheetRow[] = []
   let badDateCount = 0
   let emptyClinicCount = 0
+  const excluded = new Map<string, number>()
 
   data.forEach((o) => {
+    if (roomKey) {
+      const room = norm(o[roomKey])
+      if (isSubdistrictHospitalRoom(room)) {
+        excluded.set(room, (excluded.get(room) ?? 0) + 1)
+        return
+      }
+    }
     const clinic = norm(o[clinicKey])
     if (!clinic) {
       emptyClinicCount++
@@ -152,6 +177,11 @@ export async function readAppointmentFile(
     .map(([name, n]) => ({ name, n }))
     .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'th'))
 
+  const excludedRooms: ClinicTally[] = [...excluded.entries()]
+    .map(([name, n]) => ({ name, n }))
+    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'th'))
+  const excludedCount = excludedRooms.reduce((s, r) => s + r.n, 0)
+
   const found = new Set(counts.keys())
   const ncdMissing = expected.filter((c) => !found.has(c))
 
@@ -161,6 +191,9 @@ export async function readAppointmentFile(
     columns,
     clinicColumn: clinicCol,
     dateColumn: dateCol,
+    roomColumn: roomCol,
+    excludedRooms,
+    excludedCount,
     rows,
     clinics,
     ncdMissing,
