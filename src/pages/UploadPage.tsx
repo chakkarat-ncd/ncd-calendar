@@ -329,7 +329,7 @@ export function UploadPage() {
                       </Message>
                     )}
 
-                    {result.excludedCount > 0 && (
+                    {(result.roomColumn || result.noteColumn) && (
                       <p className="text-muted text-[12.5px] mt-3">
                         {result.excludedCount > 0 ? (
                           <>
