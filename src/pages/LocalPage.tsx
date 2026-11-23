@@ -64,9 +64,9 @@ export function LocalPage() {
   )
 
   const warnings: string[] = []
-  if (result && !result.roomColumn)
+  if (result && !result.roomColumn && !result.noteColumn)
     warnings.push(
-      'ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจ จึงกรองนัดเจาะเลือดล่วงหน้าไม่ได้ ยอดที่ได้อาจสูงกว่าความจริง',
+      'ไฟล์นี้ไม่มีทั้งคอลัมน์ห้องตรวจและหมายเหตุ จึงกรองนัดเจาะเลือดล่วงหน้าไม่ได้ ยอดที่ได้อาจสูงกว่าความจริง',
     )
   if (result?.badDateCount)
     warnings.push(`${result.badDateCount.toLocaleString()} รายการอ่านวันที่ไม่ได้ จึงไม่ถูกนับ`)

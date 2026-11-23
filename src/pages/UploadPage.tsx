@@ -259,9 +259,9 @@ export function UploadPage() {
 
           {result && (
             <>
-              {!result.roomColumn && (
-                <Message kind="warn" title="ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจ">
-                  ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจ จึงกรองนัดเจาะเลือดล่วงหน้าไม่ได้ ยอดที่ได้อาจสูงกว่าความจริง
+              {!result.roomColumn && !result.noteColumn && (
+                <Message kind="warn" title="ไฟล์นี้ไม่มีคอลัมน์ห้องตรวจและหมายเหตุ">
+                  ไฟล์นี้ไม่มีทั้งคอลัมน์ห้องตรวจและหมายเหตุ จึงกรองนัดเจาะเลือดล่วงหน้าไม่ได้ ยอดที่ได้อาจสูงกว่าความจริง
                 </Message>
               )}
 
@@ -329,7 +329,7 @@ export function UploadPage() {
                       </Message>
                     )}
 
-                    {result.roomColumn && (
+                    {result.excludedCount > 0 && (
                       <p className="text-muted text-[12.5px] mt-3">
                         {result.excludedCount > 0 ? (
                           <>

@@ -15,7 +15,12 @@ export type ParseResult = {
   dateColumn: string
   /** คอลัมน์ห้องตรวจที่ใช้กรองนัดเจาะเลือดล่วงหน้าของ รพ.สต. — null ถ้าไฟล์ไม่มีคอลัมน์นี้ */
   roomColumn: string | null
-  /** แถวที่ถูกกรองออกเพราะเป็นนัดเจาะเลือดล่วงหน้าของ รพ.สต. แยกตามชื่อห้องตรวจ */
+  /** คอลัมน์หมายเหตุที่ใช้กรองนัดเจาะเลือด รพ.สต. อีกทางหนึ่ง — null ถ้าไฟล์ไม่มีคอลัมน์นี้ */
+  noteColumn: string | null
+  /**
+   * แถวที่ถูกกรองออกเพราะเป็นนัดเจาะเลือดล่วงหน้าของ รพ.สต. แยกตามชื่อห้องตรวจ
+   * แถวที่ถูกกรองด้วยหมายเหตุรวมอยู่ใต้ป้าย NOTE_EXCLUSION_LABEL
+   */
   excludedRooms: ClinicTally[]
   excludedCount: number
   rows: SheetRow[]
@@ -51,6 +56,27 @@ export const norm = (s: unknown): string =>
  */
 export const isSubdistrictHospitalRoom = (room: string): boolean =>
   room.replace(/[.\s]/g, '').includes('รพสต')
+
+/** ป้ายชื่อในรายการ excludedRooms สำหรับแถวที่ถูกกรองเพราะหมายเหตุ */
+export const NOTE_EXCLUSION_LABEL = 'นัดเจาะเลือด รพ.สต. (ดูจากหมายเหตุ)'
+
+/**
+ * หมายเหตุของนัดเจาะเลือดล่วงหน้า รพ.สต. เช่น "Lab ประจำปี รพ.สต. หินโคน"
+ * ต้องมีทั้งคำว่า lab (ไม่สนตัวพิมพ์) และ รพ.สต. (ตัดจุดและช่องว่างก่อนเทียบ)
+ * มีแค่ รพ.สต. อย่างเดียวไม่นับ เพราะมีนัดจริงที่หมายเหตุพูดถึง รพ.สต. เช่นนัดฉีดยา
+ */
+export const isSubdistrictLabNote = (note: string): boolean =>
+  /lab/i.test(note) && isSubdistrictHospitalRoom(note)
+
+/**
+ * ตัดสินว่าแถวนี้ต้องกรองออกหรือไม่ คืนป้ายชื่อที่ใช้นับใน excludedRooms หรือ null ถ้านับตามปกติ
+ * ดูห้องตรวจก่อน (กติกาเดิม) แล้วจึงดูหมายเหตุ
+ */
+export function exclusionLabel(room: string, note: string): string | null {
+  if (isSubdistrictHospitalRoom(room)) return room
+  if (isSubdistrictLabNote(note)) return NOTE_EXCLUSION_LABEL
+  return null
+}
 
 function readAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -132,10 +158,13 @@ export async function readAppointmentFile(
 
   const roomCol =
     columns.find((c) => c === 'ห้องตรวจ') ?? columns.find((c) => c.includes('ห้องตรวจ')) ?? null
+  const noteCol =
+    columns.find((c) => c === 'หมายเหตุ') ?? columns.find((c) => c.includes('หมายเหตุ')) ?? null
 
   const clinicKey = byNorm.get(clinicCol)!
   const dateKeyCol = byNorm.get(dateCol)!
   const roomKey = roomCol ? byNorm.get(roomCol)! : null
+  const noteKey = noteCol ? byNorm.get(noteCol)! : null
 
   const rows: SheetRow[] = []
   let badDateCount = 0
@@ -143,12 +172,14 @@ export async function readAppointmentFile(
   const excluded = new Map<string, number>()
 
   data.forEach((o) => {
-    if (roomKey) {
-      const room = norm(o[roomKey])
-      if (isSubdistrictHospitalRoom(room)) {
-        excluded.set(room, (excluded.get(room) ?? 0) + 1)
-        return
-      }
+    // หมายเหตุใช้แค่ตัดสินในบรรทัดนี้ ไม่ถูกเก็บหรือส่งต่อ
+    const label = exclusionLabel(
+      roomKey ? norm(o[roomKey]) : '',
+      noteKey ? norm(o[noteKey]) : '',
+    )
+    if (label) {
+      excluded.set(label, (excluded.get(label) ?? 0) + 1)
+      return
     }
     const clinic = norm(o[clinicKey])
     if (!clinic) {
@@ -192,6 +223,7 @@ export async function readAppointmentFile(
     clinicColumn: clinicCol,
     dateColumn: dateCol,
     roomColumn: roomCol,
+    noteColumn: noteCol,
     excludedRooms,
     excludedCount,
     rows,
