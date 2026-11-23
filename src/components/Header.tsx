@@ -10,7 +10,7 @@ const TABS = [
 
 export function Header({ subtitle }: { subtitle: ReactNode }) {
   return (
-    <header className="border-b-2 border-ink pb-2.5 mb-3">
+    <header className="border-b-2 border-ink pb-2.5 mb-3 xl:pb-1.5 xl:mb-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-[25px] font-bold tracking-[-0.02em] leading-tight">

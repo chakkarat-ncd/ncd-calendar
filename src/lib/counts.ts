@@ -130,17 +130,28 @@ export function maxDateOf(keys: Iterable<string>): Date | null {
 export const MAX_ALL_DAYS = 1095
 
 /**
+ * วันสุดท้ายของเดือนที่อยู่ถัดจากเดือนของ d ไป offset เดือน
+ * ตั้งต้นจากวันที่ 1 ของเดือนก่อน เพราะ setMonth จากวันที่ 29–31 จะล้นไปเดือนถัดไป
+ * (31 ม.ค. + 1 เดือน กลายเป็น 3 มี.ค.) วันที่ 0 ของเดือนถัดไปคือวันสุดท้ายของเดือนที่ต้องการ
+ */
+export function endOfMonth(d: Date, offset = 0): Date {
+  const first = new Date(d.getFullYear(), d.getMonth() + offset, 1)
+  return new Date(first.getFullYear(), first.getMonth() + 1, 0)
+}
+
+/**
  * แปลงตัวเลือกช่วงเป็นจำนวนวันจริง
- * 'ทั้งหมด' = นับถึงวันสุดท้ายที่มีนัด แต่อย่างน้อย 1 วัน และไม่เกิน 3 ปี
+ * ตัวเลข = จำนวนเดือน นับจากวันนี้ไปจนสิ้นเดือนที่ (range - 1) ถัดไป เดือนสุดท้ายจึงไม่ขาดครึ่ง
+ * 'ทั้งหมด' = นับถึงสิ้นเดือนของวันสุดท้ายที่มีนัด แต่อย่างน้อย 1 วัน และไม่เกิน 3 ปี
  */
 export function resolveDays(
   range: number | 'all',
   from: Date,
   lastDate: Date | null,
 ): number {
-  if (range !== 'all') return range
+  if (range !== 'all') return daysBetween(from, endOfMonth(from, range - 1)) + 1
   if (!lastDate) return 1
-  return Math.min(MAX_ALL_DAYS, Math.max(1, daysBetween(from, lastDate) + 1))
+  return Math.min(MAX_ALL_DAYS, Math.max(1, daysBetween(from, endOfMonth(lastDate)) + 1))
 }
 
 /**

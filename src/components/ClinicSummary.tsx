@@ -16,7 +16,7 @@ export function ClinicSummary({ clinics }: { clinics: ClinicConfig[] }) {
   const lead = `นับรวม ${active.length} คลินิก`
 
   return (
-    <div className="mb-2.5">
+    <div className="mb-2.5 xl:mb-1.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {/* มือถือ: กดเพื่อกาง */}
         <button

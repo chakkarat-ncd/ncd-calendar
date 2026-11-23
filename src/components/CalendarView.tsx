@@ -60,7 +60,7 @@ export function CalendarView({
       )}
 
       {/* ตัวเลขสรุปกับปุ่มเลือกช่วงอยู่แถวเดียวกัน ปฏิทินจึงขึ้นมาอยู่สูงกว่าเดิม */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2 xl:mb-1">
         <SummaryLine summary={summary} days={days} />
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:ml-auto">
           <RangeButtons value={range} onChange={onRange} />

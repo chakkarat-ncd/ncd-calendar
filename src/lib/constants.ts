@@ -74,10 +74,13 @@ export const TH_D = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 /** หัวตารางปฏิทิน เริ่มวันจันทร์ */
 export const TH_D_MON_FIRST = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
 
-/** ตัวเลือกช่วงวันของหน้าปฏิทิน ค่าเริ่มต้นคือ 120 วัน */
-export type RangeOption = 90 | 120 | 180 | 'all'
-export const RANGE_OPTIONS: RangeOption[] = [90, 120, 180, 'all']
-export const DEFAULT_RANGE: RangeOption = 120
+/**
+ * ตัวเลือกช่วงของหน้าปฏิทิน ตัวเลขคือจำนวนเดือน ค่าเริ่มต้นคือ 6 เดือน
+ * เดือนแรกเริ่มจากวันนี้ ส่วนเดือนสุดท้ายแสดงจนครบสิ้นเดือนเสมอ
+ */
+export type RangeOption = 3 | 6 | 12 | 'all'
+export const RANGE_OPTIONS: RangeOption[] = [3, 6, 12, 'all']
+export const DEFAULT_RANGE: RangeOption = 6
 
 /** อัปโหลดมาไม่เกินกี่วันจึงถือว่าข้อมูลยังสด */
 export const FRESH_DAYS = 1

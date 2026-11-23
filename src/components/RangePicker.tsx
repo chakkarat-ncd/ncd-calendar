@@ -18,7 +18,7 @@ export function RangeButtons({
           className={'rb' + (v === value ? ' on' : '')}
           onClick={() => onChange(v)}
         >
-          {v === 'all' ? 'ทั้งหมด' : `${v} วัน`}
+          {v === 'all' ? 'ทั้งหมด' : `${v} เดือน`}
         </button>
       ))}
     </div>

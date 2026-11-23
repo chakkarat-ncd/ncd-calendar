@@ -12,7 +12,7 @@ const ITEMS = [
 /** คำอธิบายสีแบบบรรทัดเดียว รวมหมายเหตุวันศุกร์ไว้ในแถวเดียวกันเพื่อประหยัดพื้นที่แนวตั้ง */
 export function Legend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-ink-2 mb-2.5">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-ink-2 mb-2.5 xl:mb-2">
       {ITEMS.map((i) => (
         <span key={i.label} className="inline-flex items-center gap-1.5">
           <i className={`w-[12px] h-[12px] rounded-[3px] border inline-block ${i.cls}`} />

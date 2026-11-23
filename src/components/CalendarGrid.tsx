@@ -65,7 +65,9 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
       className={
         // ปล่อยให้ aspect-square เป็นตัวกำหนดขนาด ช่องจึงย่อตามคอลัมน์ของเดือนได้เอง
         // min-h เหลือไว้เป็นพื้นแค่กันช่องแบนตอนจอแคบมาก ไม่ให้ไปสู้กับ aspect-square
-        'aspect-square rounded-[9px] border p-1 sm:p-1.5 xl:p-1 flex flex-col justify-between ' +
+        // จอคอม (xl) เตี้ยกว่าจัตุรัสเล็กน้อย ให้ 6 เดือนลงพอดีจอ 1920x1080 แม้มีเดือนที่ยาว 6 สัปดาห์
+        // ขนาดตัวเลขไม่เปลี่ยน ลดแค่ที่ว่างในช่อง
+        'aspect-square xl:aspect-auto xl:h-[54px] rounded-[9px] border p-1 sm:p-1.5 xl:p-1 flex flex-col justify-between ' +
         'min-h-[42px] overflow-hidden ' +
         box +
         (isToday ? ' outline outline-2 outline-ink outline-offset-1' : '')
@@ -153,7 +155,7 @@ export function CalendarGrid({ list }: { list: DayCount[] }) {
   return (
     // วางเดือนข้างกันเมื่อจอกว้างพอ จะได้เห็นหลายเดือนโดยไม่ต้องเลื่อน
     // 1 คอลัมน์เมื่อแคบกว่า 900px · 2 คอลัมน์ที่ 900–1279px · 3 คอลัมน์ตั้งแต่ 1280px
-    <div className="grid grid-cols-1 min-[900px]:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-6 mb-[22px]">
+    <div className="grid grid-cols-1 min-[900px]:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-6 xl:gap-y-4 mb-[22px]">
       {months.map((mo) => {
         const isThisMonth = mo.y === now.getFullYear() && mo.m === now.getMonth()
         return (
@@ -164,7 +166,7 @@ export function CalendarGrid({ list }: { list: DayCount[] }) {
             {/* แถบหัวเดือน เดือนปัจจุบันเป็นพื้นเข้มตัวอักษรขาว เดือนอื่นเป็นพื้นเทาอ่อน */}
             <div
               className={
-                'flex items-baseline justify-between gap-2 px-3 py-[7px] ' +
+                'flex items-baseline justify-between gap-2 px-3 py-[7px] xl:py-[5px] ' +
                 (isThisMonth ? 'bg-month-head text-white' : 'bg-[#EDEAE4] text-ink')
               }
             >
@@ -181,7 +183,7 @@ export function CalendarGrid({ list }: { list: DayCount[] }) {
             {/* padding แนวนอนบางที่สุดเท่าที่ยังดูเป็นกรอบ เพื่อไม่ให้ช่องวันที่ถูกบีบ */}
             <div className="px-1 pt-1.5 pb-1.5">
               {/* หัววัน มีเส้นคั่นยาวต่อเนื่องใต้แถว แยกออกจากตารางวันที่ */}
-              <div className={`grid grid-cols-7 ${CELL_GAP} border-b border-line-dark pb-1 mb-1.5`}>
+              <div className={`grid grid-cols-7 ${CELL_GAP} border-b border-line-dark pb-1 mb-1.5 xl:mb-1`}>
                 {TH_D_MON_FIRST.map((d, i) => (
                   <div
                     key={d}
