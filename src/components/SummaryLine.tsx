@@ -26,10 +26,10 @@ export function SummaryLine({ summary, days }: { summary: Summary; days: number 
       ))}
       {summary.misbooked.length > 0 && (
         // วันหยุดที่มีนัดไม่ถูกนับรวมข้างบน จึงต้องบอกแยกไว้ ไม่ให้หายไปเงียบ ๆ
-        <span className="inline-flex items-baseline gap-1 bg-bad-bg border border-bad-line text-bad-ink rounded-md px-2 py-[1px] ml-1">
-          <span>⚠</span>
-          <strong className="font-mono font-semibold">{summary.misbooked.length}</strong>
-          <span className="text-[12.5px]">วันหยุดที่มีนัด</span>
+        <span className="inline-flex items-baseline gap-1 bg-bad-bg border border-bad-line text-bad-ink rounded-lg px-4 py-[7px] ml-1">
+          <span className="text-[24px] leading-none">⚠</span>
+          <strong className="font-mono text-[28px] font-bold leading-none">{summary.misbooked.length}</strong>
+          <span className="text-[17px] font-bold">วันหยุดที่มีนัด</span>
         </span>
       )}
     </div>
