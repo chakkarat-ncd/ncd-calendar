@@ -94,6 +94,39 @@ export function tallyRowsByDay(rows: CountRow[], clinics: ClinicWindow[]): Map<s
   return m
 }
 
+/** ยอดของหนึ่งคลินิกในหนึ่งวัน */
+export type ClinicCount = { clinic: string; n: number }
+
+/**
+ * ยอดรายวันแยกตามคลินิก ใช้แสดงในกล่องเมื่อชี้ที่ช่องวัน
+ * กรองด้วยเงื่อนไขเดียวกับ tallyRowsByDay ทุกประการ ผลรวมในกล่องจึงเท่ากับตัวเลขในช่องวันเสมอ
+ * เรียงจากมากไปน้อย ถ้าเท่ากันเรียงตามชื่อ
+ */
+export function breakdownByDay(
+  rows: CountRow[],
+  clinics: ClinicWindow[],
+): Map<string, ClinicCount[]> {
+  const byName = new Map(clinics.map((c) => [c.clinic_name, c]))
+  const perDay = new Map<string, Map<string, number>>()
+  rows.forEach((r) => {
+    const c = byName.get(r.c)
+    if (!c || !isClinicActiveOn(c, r.d)) return
+    let day = perDay.get(r.d)
+    if (!day) perDay.set(r.d, (day = new Map()))
+    day.set(r.c, (day.get(r.c) ?? 0) + r.n)
+  })
+  const out = new Map<string, ClinicCount[]>()
+  perDay.forEach((day, key) => {
+    out.set(
+      key,
+      [...day.entries()]
+        .map(([clinic, n]) => ({ clinic, n }))
+        .sort((x, y) => y.n - x.n || x.clinic.localeCompare(y.clinic, 'th')),
+    )
+  })
+  return out
+}
+
 /** คลินิกที่ยังเปิดอยู่ ณ วันที่กำหนด ใช้กับแถบบอกว่านับรวมคลินิกอะไรบ้าง */
 export function activeClinicsOn<T extends ClinicWindow>(clinics: T[], dayKey: string): T[] {
   return clinics.filter((c) => isClinicActiveOn(c, dayKey))

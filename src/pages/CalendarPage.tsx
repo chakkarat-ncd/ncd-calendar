@@ -7,7 +7,7 @@ import { FreshnessBar } from '../components/FreshnessBar'
 import { Header } from '../components/Header'
 import { Message } from '../components/Message'
 import { DEFAULT_RANGE, STALE_DAYS, type RangeOption } from '../lib/constants'
-import { tallyRowsByDay, type CountRow } from '../lib/counts'
+import { breakdownByDay, tallyRowsByDay, type CountRow } from '../lib/counts'
 import { daysBetween, fmtDateTime } from '../lib/date'
 import {
   DataError,
@@ -83,6 +83,7 @@ export function CalendarPage() {
   }, [load])
 
   const counts = tallyRowsByDay(rows, clinics)
+  const breakdown = breakdownByDay(rows, clinics)
   const uploadedAt = log ? new Date(log.uploaded_at) : null
   const staleDays = uploadedAt ? daysBetween(uploadedAt, new Date()) : null
   const stale = staleDays !== null && staleDays > STALE_DAYS
@@ -142,7 +143,13 @@ export function CalendarPage() {
             />
           )}
 
-          <CalendarView counts={counts} range={range} onRange={setRange} holidays={holidays} />
+          <CalendarView
+            counts={counts}
+            range={range}
+            onRange={setRange}
+            holidays={holidays}
+            breakdown={breakdown}
+          />
         </>
       )}
 

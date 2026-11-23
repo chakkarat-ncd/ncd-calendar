@@ -6,6 +6,7 @@ import {
   maxDateOf,
   resolveDays,
   summarize,
+  type ClinicCount,
   yearsMissingHolidays,
 } from '../lib/counts'
 import { addDays, today } from '../lib/date'
@@ -28,11 +29,14 @@ export function CalendarView({
   range,
   onRange,
   holidays,
+  breakdown,
 }: {
   counts: Map<string, number>
   range: RangeOption
   onRange: (v: RangeOption) => void
   holidays?: Map<string, string>
+  /** ยอดแยกรายคลินิก ส่งมาเฉพาะหน้าที่มีข้อมูลรายคลินิก ถ้าไม่ส่งจะไม่มีกล่องเมื่อชี้ที่ช่องวัน */
+  breakdown?: Map<string, ClinicCount[]>
 }) {
   const from = today()
   const days = resolveDays(range, from, maxDateOf(counts.keys()))
@@ -70,7 +74,7 @@ export function CalendarView({
 
       <Legend />
 
-      <CalendarGrid list={list} />
+      <CalendarGrid list={list} breakdown={breakdown} />
 
       <div className="panel">
         <h3 className="panel-h">วันที่ยังรับนัดได้ — ใช้ตอบผู้ป่วยเมื่อวันที่ขอมาเต็มแล้ว</h3>

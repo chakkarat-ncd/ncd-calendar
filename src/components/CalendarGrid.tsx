@@ -1,6 +1,15 @@
+import { useEffect, useRef, useState, type HTMLAttributes } from 'react'
 import { limitOf, TH_M, TH_D_MON_FIRST } from '../lib/constants'
-import { levelOfDay, overflowOf, remainingOf, type DayCount, type Level } from '../lib/counts'
+import {
+  levelOfDay,
+  overflowOf,
+  remainingOf,
+  type ClinicCount,
+  type DayCount,
+  type Level,
+} from '../lib/counts'
 import { dateKey, fmt, padBeforeMonday, today } from '../lib/date'
+import { DayBreakdown } from './DayBreakdown'
 
 const CELL: Record<Level, string> = {
   none: 'bg-none-bg border-line',
@@ -47,7 +56,19 @@ function tip(x: DayCount): string {
   return `${withCap} — ${x.n} นัด รับได้อีก ${remainingOf(x)} ราย`
 }
 
-function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
+function Cell({
+  x,
+  isToday,
+  events,
+  hasBreakdown,
+}: {
+  x: DayCount
+  isToday: boolean
+  /** หน้านี้มีกล่องยอดแยกรายคลินิก จึงไม่ต้องใช้ tooltip ของเบราว์เซอร์ */
+  hasBreakdown: boolean
+  /** ตัวจัดการเมาส์และการแตะ ส่งมาเฉพาะช่องที่มีกล่องยอดแยกรายคลินิก */
+  events?: HTMLAttributes<HTMLDivElement>
+}) {
   const lv = levelOfDay(x)
   // แถบเทียบกับเพดานของวันนั้น ศุกร์ 30 นัดจึงดูเต็มกว่าพุธ 30 นัด ตามความจริง
   const pct = Math.min(100, Math.round((x.n / limitOf(x.date).cap) * 100))
@@ -61,7 +82,10 @@ function Cell({ x, isToday }: { x: DayCount; isToday: boolean }) {
 
   return (
     <div
-      title={tip(x)}
+      // หน้าที่มีกล่องยอดแยกรายคลินิกไม่ใช้ tooltip ของเบราว์เซอร์เลย กล่องใหม่บอกข้อมูลเดิมครบแล้ว
+      // tip() ยังใช้กับหน้าที่ไม่มีข้อมูลรายคลินิก เช่นโหมดดูจากไฟล์
+      title={hasBreakdown ? undefined : tip(x)}
+      {...events}
       className={
         // ปล่อยให้ aspect-square เป็นตัวกำหนดขนาด ช่องจึงย่อตามคอลัมน์ของเดือนได้เอง
         // min-h เหลือไว้เป็นพื้นแค่กันช่องแบนตอนจอแคบมาก ไม่ให้ไปสู้กับ aspect-square
@@ -147,10 +171,63 @@ function groupByMonth(list: DayCount[]): Month[] {
 const CELL_GAP = 'gap-[3px] sm:gap-[4px]'
 
 /** ปฏิทินรายเดือน ตาราง 7 คอลัมน์ เริ่มวันจันทร์ แต่ละเดือนเป็นการ์ดของตัวเอง */
-export function CalendarGrid({ list }: { list: DayCount[] }) {
+type Open = { x: DayCount; el: HTMLElement; via: 'mouse' | 'touch' }
+
+export function CalendarGrid({
+  list,
+  breakdown,
+}: {
+  list: DayCount[]
+  /** ยอดแยกรายคลินิก ถ้าไม่ส่งมาจะไม่มีกล่องเมื่อชี้หรือแตะที่ช่องวัน */
+  breakdown?: Map<string, ClinicCount[]>
+}) {
   const now = today()
   const todayKey = dateKey(now)
   const months = groupByMonth(list)
+
+  // เดสก์ท็อปเปิดด้วย hover ส่วนมือถือเปิดด้วยการแตะ จึงต้องรู้ว่าแตะด้วยอะไร
+  const [open, setOpen] = useState<Open | null>(null)
+  const lastPointer = useRef<string>('mouse')
+
+  useEffect(() => {
+    if (!open) return
+    // กล่องลอยอยู่ตำแหน่งเดิมบนจอ ถ้าเลื่อนหน้าหรือเปลี่ยนขนาดจอให้ปิดไปก่อน
+    const close = () => setOpen(null)
+    // แตะที่อื่นนอกช่องวันนั้นให้ปิด ส่วนแตะที่ช่องเดิมให้ onClick ของช่องจัดการ
+    const onDown = (e: PointerEvent) => {
+      if (!open.el.contains(e.target as Node)) setOpen(null)
+    }
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    document.addEventListener('pointerdown', onDown)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [open])
+
+  const eventsFor = (x: DayCount): HTMLAttributes<HTMLDivElement> | undefined => {
+    // วันทำการที่ไม่มีนัดไม่ต้องมีกล่อง ส่วนวันปิดมีกล่องเสมอเพื่อบอกว่าหยุดเพราะอะไร
+    if (!breakdown || (x.n === 0 && !x.closed)) return undefined
+    return {
+      onPointerDown: (e) => {
+        lastPointer.current = e.pointerType
+      },
+      onPointerEnter: (e) => {
+        if (e.pointerType === 'mouse') setOpen({ x, el: e.currentTarget, via: 'mouse' })
+      },
+      onPointerLeave: (e) => {
+        if (e.pointerType === 'mouse')
+          setOpen((o) => (o?.via === 'mouse' && o.x.key === x.key ? null : o))
+      },
+      onClick: (e) => {
+        if (lastPointer.current === 'mouse') return
+        const el = e.currentTarget
+        setOpen((o) => (o?.x.key === x.key ? null : { x, el, via: 'touch' }))
+      },
+    }
+  }
 
   return (
     // วางเดือนข้างกันเมื่อจอกว้างพอ จะได้เห็นหลายเดือนโดยไม่ต้องเลื่อน
@@ -203,13 +280,22 @@ export function CalendarGrid({ list }: { list: DayCount[] }) {
                   <div key={`pad${i}`} />
                 ))}
                 {mo.days.map((x) => (
-                  <Cell key={x.key} x={x} isToday={x.key === todayKey} />
+                  <Cell
+                    key={x.key}
+                    x={x}
+                    isToday={x.key === todayKey}
+                    events={eventsFor(x)}
+                    hasBreakdown={!!breakdown}
+                  />
                 ))}
               </div>
             </div>
           </section>
         )
       })}
+      {open && breakdown && (
+        <DayBreakdown x={open.x} items={breakdown.get(open.x.key) ?? []} anchor={open.el} />
+      )}
     </div>
   )
 }
